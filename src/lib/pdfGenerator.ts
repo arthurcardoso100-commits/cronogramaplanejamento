@@ -167,11 +167,12 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       seq: 15,
       functional: 70,
       serial: 30,
+      team: 20,
       start: 28,
       end: 28,
       duration: 22,
       predecessor: 25,
-      gantt: contentWidth - 218,
+      gantt: contentWidth - 238,
     };
 
     // Header background with modern gradient effect
@@ -190,6 +191,8 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     xPos += colWidths.functional;
     pdf.text("Serial Number", xPos, yPos + 8);
     xPos += colWidths.serial;
+    pdf.text("Team", xPos, yPos + 8);
+    xPos += colWidths.team;
     pdf.text("Start", xPos, yPos + 8);
     xPos += colWidths.start;
     pdf.text("End", xPos, yPos + 8);
@@ -252,6 +255,12 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
         maxWidth: colWidths.serial - 4,
       });
       xPos += colWidths.serial;
+      
+      // Team
+      pdf.text(activity.team || "-", xPos, textY, {
+        maxWidth: colWidths.team - 4,
+      });
+      xPos += colWidths.team;
       
       // Start Date
       pdf.text(format(activity.startDate, "dd/MM/yyyy"), xPos, textY);
