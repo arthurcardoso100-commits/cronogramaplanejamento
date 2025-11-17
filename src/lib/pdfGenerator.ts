@@ -17,9 +17,9 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   const margin = 15;
   const contentWidth = pageWidth - 2 * margin;
 
-  // Add Vestas logo with correct aspect ratio
+  // Add Vestas logo with correct aspect ratio (3.33:1)
   const logoWidth = 40;
-  const logoHeight = 12;
+  const logoHeight = 18;
   pdf.addImage(vestasLogo, "PNG", margin, margin, logoWidth, logoHeight);
 
   // Title
@@ -47,9 +47,17 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   let yPos = margin + 25;
 
   // Calculate date range for Gantt chart and calendar
+  // Add 2 days buffer before and after
   const allDates = activities.flatMap(a => [a.startDate, a.endDate]);
-  const projectStart = min(allDates);
-  const projectEnd = max(allDates);
+  const minDate = min(allDates);
+  const maxDate = max(allDates);
+  
+  const projectStart = new Date(minDate);
+  projectStart.setDate(projectStart.getDate() - 2);
+  
+  const projectEnd = new Date(maxDate);
+  projectEnd.setDate(projectEnd.getDate() + 2);
+  
   const totalDays = differenceInDays(projectEnd, projectStart) + 1;
 
   // Table headers
@@ -93,25 +101,66 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   const ganttX = xPos;
   const ganttWidth = colWidths.gantt - 4;
   
-  // Draw calendar dates
-  pdf.setFontSize(6);
-  const daysToShow = Math.min(totalDays, 30); // Show up to 30 days
-  const dayWidth = ganttWidth / daysToShow;
+  // Calculate weeks to show
+  const totalWeeks = Math.ceil(totalDays / 7);
+  const weekWidth = ganttWidth / totalWeeks;
   
-  for (let i = 0; i < daysToShow; i++) {
-    const currentDate = new Date(projectStart);
-    currentDate.setDate(currentDate.getDate() + Math.floor((i / daysToShow) * totalDays));
-    const dateStr = format(currentDate, "dd/MM");
-    const dayX = ganttX + (i * dayWidth);
+  // Draw month/year labels
+  pdf.setFontSize(7);
+  pdf.setFont("helvetica", "bold");
+  
+  let currentMonth = -1;
+  let monthStartX = ganttX;
+  
+  for (let i = 0; i < totalWeeks; i++) {
+    const weekDate = new Date(projectStart);
+    weekDate.setDate(weekDate.getDate() + (i * 7));
+    const weekX = ganttX + (i * weekWidth);
+    
+    // Check if month changed
+    if (weekDate.getMonth() !== currentMonth) {
+      // Draw previous month label if exists
+      if (currentMonth !== -1) {
+        const monthWidth = weekX - monthStartX;
+        const prevMonth = new Date(weekDate);
+        prevMonth.setMonth(prevMonth.getMonth() - 1);
+        const monthLabel = format(prevMonth, "MMM/yyyy", { locale: ptBR });
+        pdf.text(monthLabel, monthStartX + monthWidth / 2, yPos + 4, { align: "center" });
+      }
+      currentMonth = weekDate.getMonth();
+      monthStartX = weekX;
+    }
+  }
+  
+  // Draw last month label
+  const lastWeekDate = new Date(projectStart);
+  lastWeekDate.setDate(lastWeekDate.getDate() + (totalWeeks * 7));
+  const monthLabel = format(lastWeekDate, "MMM/yyyy", { locale: ptBR });
+  pdf.text(monthLabel, monthStartX + (ganttX + ganttWidth - monthStartX) / 2, yPos + 4, { align: "center" });
+  
+  // Draw separator line between months and weeks
+  pdf.setDrawColor(255, 255, 255);
+  pdf.setLineWidth(0.3);
+  pdf.line(ganttX, yPos + 6, ganttX + ganttWidth, yPos + 6);
+  
+  // Draw week numbers
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(6);
+  
+  for (let i = 0; i < totalWeeks; i++) {
+    const weekDate = new Date(projectStart);
+    weekDate.setDate(weekDate.getDate() + (i * 7));
+    const weekX = ganttX + (i * weekWidth);
+    const weekNum = Math.floor(weekDate.getDate() / 7) + 1;
     
     // Draw vertical separator
     if (i > 0) {
       pdf.setDrawColor(255, 255, 255);
       pdf.setLineWidth(0.1);
-      pdf.line(dayX, yPos, dayX, yPos + 12);
+      pdf.line(weekX, yPos + 6, weekX, yPos + 12);
     }
     
-    pdf.text(dateStr, dayX + dayWidth / 2, yPos + 8, { align: "center" });
+    pdf.text(`S${weekNum}`, weekX + weekWidth / 2, yPos + 10, { align: "center" });
   }
 
   yPos += 12;
@@ -193,13 +242,9 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     const barX = ganttX + (daysFromStart / totalDays) * ganttWidth;
     const barWidth = (activityDays / totalDays) * ganttWidth;
 
-    // Draw modern Gantt bar with gradient effect
+    // Draw minimalist Gantt bar
     pdf.setFillColor(59, 130, 246); // Modern blue
     pdf.roundedRect(barX, ganttY, barWidth, ganttHeight, 2, 2, "F");
-    
-    // Add subtle shadow effect
-    pdf.setFillColor(59, 130, 246, 0.3);
-    pdf.roundedRect(barX, ganttY + ganttHeight - 1, barWidth, 1, 2, 2, "F");
     
     // Add end date label at the end of the bar
     pdf.setFontSize(6);
@@ -215,31 +260,32 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
         const predIndex = predecessorData.index;
         
         // Calculate predecessor bar end position
-        const predDaysFromStart = differenceInDays(predActivity.endDate, projectStart);
+        const predDaysFromStart = differenceInDays(predActivity.startDate, projectStart);
         const predActivityDays = differenceInDays(predActivity.endDate, predActivity.startDate) + 1;
         const predBarX = ganttX + (predDaysFromStart / totalDays) * ganttWidth;
         const predBarWidth = (predActivityDays / totalDays) * ganttWidth;
         const predBarEndX = predBarX + predBarWidth;
-        const predBarY = margin + 37 + (predIndex * rowHeight) + rowHeight / 2;
+        const predBarY = margin + 37 + (predIndex * rowHeight) + ganttY - yPos + ganttHeight / 2;
         
         // Current activity bar start position
         const currentBarY = ganttY + ganttHeight / 2;
         
-        // Draw arrow (MS Project style: from end of predecessor bar)
+        // Draw arrow (MS Project style: from end of predecessor bar to start of current bar)
         pdf.setDrawColor(75, 85, 99);
         pdf.setLineWidth(0.4);
         
-        // Horizontal line from predecessor end
-        const horizontalMidX = predBarEndX + 3;
+        // Arrow exits before the end date label
+        // Horizontal line from predecessor bar end
+        const horizontalMidX = predBarEndX + 1;
         pdf.line(predBarEndX, predBarY, horizontalMidX, predBarY);
         
         // Vertical line
         pdf.line(horizontalMidX, predBarY, horizontalMidX, currentBarY);
         
-        // Horizontal line to current activity
+        // Horizontal line to current activity start
         pdf.line(horizontalMidX, currentBarY, barX, currentBarY);
         
-        // Draw arrow head (larger and more visible)
+        // Draw arrow head pointing to the start of the successor bar
         pdf.line(barX, currentBarY, barX - 2, currentBarY - 1.5);
         pdf.line(barX, currentBarY, barX - 2, currentBarY + 1.5);
       }
