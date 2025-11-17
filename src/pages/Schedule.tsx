@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Wind, Download, Plus, Trash2, LogOut } from "lucide-react";
 import { ActivityForm } from "@/components/ActivityForm";
 import { ActivityList } from "@/components/ActivityList";
@@ -17,12 +19,15 @@ export interface Activity {
   endDate: Date;
   includeWeekends: boolean;
   duration: number;
+  predecessor: string;
 }
 
 const Schedule = () => {
   const navigate = useNavigate();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [activityName, setActivityName] = useState("");
+  const [windfarmName, setWindfarmName] = useState("");
 
   useEffect(() => {
     if (sessionStorage.getItem("authenticated") !== "true") {
@@ -30,10 +35,10 @@ const Schedule = () => {
     }
   }, [navigate]);
 
-  const handleAddActivity = (activity: Activity) => {
-    setActivities([...activities, activity]);
+  const handleAddActivities = (newActivities: Activity[]) => {
+    setActivities(newActivities);
     setShowForm(false);
-    toast.success("Atividade adicionada");
+    toast.success(`${newActivities.length} atividades adicionadas`);
   };
 
   const handleRemoveActivity = (id: string) => {
@@ -47,7 +52,12 @@ const Schedule = () => {
       return;
     }
     
-    generatePDF(activities);
+    if (!activityName || !windfarmName) {
+      toast.error("Informe o nome da atividade e do windfarm");
+      return;
+    }
+    
+    generatePDF(activities, activityName, windfarmName);
     toast.success("PDF gerado com sucesso");
   };
 
@@ -78,18 +88,49 @@ const Schedule = () => {
         <div className="grid gap-6">
           <Card className="shadow-lg">
             <CardHeader>
+              <CardTitle>Informações do Cronograma</CardTitle>
+              <CardDescription>
+                Preencha as informações básicas do cronograma
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="activityName">Nome da Atividade *</Label>
+                  <Input
+                    id="activityName"
+                    value={activityName}
+                    onChange={(e) => setActivityName(e.target.value)}
+                    placeholder="Ex: Service 1Y"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="windfarmName">Nome do Windfarm *</Label>
+                  <Input
+                    id="windfarmName"
+                    value={windfarmName}
+                    onChange={(e) => setWindfarmName(e.target.value)}
+                    placeholder="Ex: Monte Verde"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg">
+            <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Atividades do Cronograma</CardTitle>
                   <CardDescription>
-                    Adicione atividades para gerar o cronograma em PDF
+                    Cole os dados do Excel com todas as atividades
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
                   {!showForm && (
                     <Button onClick={() => setShowForm(true)}>
                       <Plus className="w-4 h-4 mr-2" />
-                      Nova Atividade
+                      Importar Atividades
                     </Button>
                   )}
                   {activities.length > 0 && (
@@ -104,14 +145,14 @@ const Schedule = () => {
             <CardContent>
               {showForm ? (
                 <ActivityForm
-                  onSubmit={handleAddActivity}
+                  onSubmit={handleAddActivities}
                   onCancel={() => setShowForm(false)}
                 />
               ) : activities.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Wind className="w-16 h-16 mx-auto mb-4 opacity-50" />
                   <p>Nenhuma atividade adicionada ainda</p>
-                  <p className="text-sm mt-2">Clique em "Nova Atividade" para começar</p>
+                  <p className="text-sm mt-2">Clique em "Importar Atividades" para começar</p>
                 </div>
               ) : (
                 <ActivityList

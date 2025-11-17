@@ -41,6 +41,11 @@ export const ActivityList = ({ activities, onRemove }: ActivityListProps) => {
                 <span className="bg-accent/10 text-accent px-2 py-1 rounded">
                   {activity.duration} dias
                 </span>
+                {activity.predecessor && (
+                  <span className="text-xs">
+                    Predecessor: {activity.predecessor}
+                  </span>
+                )}
               </div>
             </div>
             

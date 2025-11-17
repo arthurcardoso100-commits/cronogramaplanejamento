@@ -2,8 +2,9 @@ import jsPDF from "jspdf";
 import { Activity } from "@/pages/Schedule";
 import { format, differenceInDays, min, max } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import vestasLogo from "@/assets/vestas-logo.png";
 
-export const generatePDF = (activities: Activity[]) => {
+export const generatePDF = (activities: Activity[], activityName: string, windfarmName: string) => {
   // A3 landscape dimensions in mm
   const pdf = new jsPDF({
     orientation: "landscape",
@@ -16,20 +17,19 @@ export const generatePDF = (activities: Activity[]) => {
   const margin = 15;
   const contentWidth = pageWidth - 2 * margin;
 
-  // Logo area (simplified - text for now)
-  pdf.setFillColor(33, 87, 138); // Vestas blue
-  pdf.rect(margin, margin, 50, 15, "F");
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(16);
-  pdf.setFont("helvetica", "bold");
-  pdf.text("VESTAS", margin + 5, margin + 10);
+  // Add Vestas logo
+  pdf.addImage(vestasLogo, "PNG", margin, margin, 50, 12);
 
   // Title
   pdf.setTextColor(33, 87, 138);
-  pdf.setFontSize(20);
-  pdf.text("CRONOGRAMA DE SERVIÇO", pageWidth / 2, margin + 10, {
-    align: "center",
-  });
+  pdf.setFontSize(18);
+  pdf.setFont("helvetica", "bold");
+  pdf.text(
+    `Cronograma ${activityName} - ${windfarmName}`,
+    pageWidth / 2,
+    margin + 10,
+    { align: "center" }
+  );
 
   // Date
   pdf.setTextColor(100, 100, 100);
@@ -44,15 +44,16 @@ export const generatePDF = (activities: Activity[]) => {
   // Table starting position
   let yPos = margin + 25;
 
-  // Table headers
+  // Table headers with predecessor column
   const colWidths = {
-    serial: 35,
-    functional: 60,
-    activity: 80,
-    start: 30,
-    end: 30,
-    duration: 25,
-    gantt: contentWidth - 260,
+    serial: 30,
+    functional: 50,
+    activity: 70,
+    start: 25,
+    end: 25,
+    duration: 20,
+    predecessor: 25,
+    gantt: contentWidth - 245,
   };
 
   // Header background
@@ -61,22 +62,24 @@ export const generatePDF = (activities: Activity[]) => {
 
   // Header text
   pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(9);
+  pdf.setFontSize(8);
   pdf.setFont("helvetica", "bold");
   
   let xPos = margin + 2;
-  pdf.text("Serial Number", xPos, yPos + 7);
+  pdf.text("Serial", xPos, yPos + 7);
   xPos += colWidths.serial;
-  pdf.text("Functional Desc.", xPos, yPos + 7);
+  pdf.text("Functional", xPos, yPos + 7);
   xPos += colWidths.functional;
-  pdf.text("Descrição da Atividade", xPos, yPos + 7);
+  pdf.text("Descrição", xPos, yPos + 7);
   xPos += colWidths.activity;
   pdf.text("Início", xPos, yPos + 7);
   xPos += colWidths.start;
-  pdf.text("Término", xPos, yPos + 7);
+  pdf.text("Fim", xPos, yPos + 7);
   xPos += colWidths.end;
-  pdf.text("Duração", xPos, yPos + 7);
+  pdf.text("Dur.", xPos, yPos + 7);
   xPos += colWidths.duration;
+  pdf.text("Pred.", xPos, yPos + 7);
+  xPos += colWidths.predecessor;
   pdf.text("Gantt", xPos, yPos + 7);
 
   yPos += 10;
@@ -92,7 +95,7 @@ export const generatePDF = (activities: Activity[]) => {
   pdf.setTextColor(60, 60, 60);
   
   activities.forEach((activity, index) => {
-    const rowHeight = 15;
+    const rowHeight = 12;
     
     // Alternate row colors
     if (index % 2 === 0) {
@@ -105,17 +108,17 @@ export const generatePDF = (activities: Activity[]) => {
     pdf.rect(margin, yPos, contentWidth, rowHeight);
 
     // Row text
-    pdf.setFontSize(8);
+    pdf.setFontSize(7);
     xPos = margin + 2;
     
     // Serial Number
-    pdf.text(activity.serialNumber, xPos, yPos + 10, {
+    pdf.text(activity.serialNumber, xPos, yPos + 8, {
       maxWidth: colWidths.serial - 4,
     });
     xPos += colWidths.serial;
     
     // Functional Description
-    pdf.text(activity.functionalDescription, xPos, yPos + 10, {
+    pdf.text(activity.functionalDescription, xPos, yPos + 8, {
       maxWidth: colWidths.functional - 4,
     });
     xPos += colWidths.functional;
@@ -125,26 +128,32 @@ export const generatePDF = (activities: Activity[]) => {
       activity.activityDescription,
       colWidths.activity - 4
     );
-    pdf.text(lines[0], xPos, yPos + 10);
+    pdf.text(lines[0], xPos, yPos + 8);
     xPos += colWidths.activity;
     
     // Start Date
-    pdf.text(format(activity.startDate, "dd/MM/yyyy"), xPos, yPos + 10);
+    pdf.text(format(activity.startDate, "dd/MM/yy"), xPos, yPos + 8);
     xPos += colWidths.start;
     
     // End Date
-    pdf.text(format(activity.endDate, "dd/MM/yyyy"), xPos, yPos + 10);
+    pdf.text(format(activity.endDate, "dd/MM/yy"), xPos, yPos + 8);
     xPos += colWidths.end;
     
     // Duration
-    pdf.text(`${activity.duration}d`, xPos, yPos + 10);
+    pdf.text(`${activity.duration}d`, xPos, yPos + 8);
     xPos += colWidths.duration;
+
+    // Predecessor
+    pdf.text(activity.predecessor || "-", xPos, yPos + 8, {
+      maxWidth: colWidths.predecessor - 4,
+    });
+    xPos += colWidths.predecessor;
 
     // Gantt bar
     const ganttX = xPos;
     const ganttWidth = colWidths.gantt - 4;
-    const ganttY = yPos + 3;
-    const ganttHeight = rowHeight - 6;
+    const ganttY = yPos + 2;
+    const ganttHeight = rowHeight - 4;
 
     // Calculate bar position and width
     const daysFromStart = differenceInDays(activity.startDate, projectStart);
@@ -154,8 +163,8 @@ export const generatePDF = (activities: Activity[]) => {
     const barWidth = (activityDays / totalDays) * ganttWidth;
 
     // Draw Gantt bar
-    pdf.setFillColor(52, 168, 211); // Wind blue
-    pdf.roundedRect(barX, ganttY, barWidth, ganttHeight, 2, 2, "F");
+    pdf.setFillColor(52, 168, 211);
+    pdf.roundedRect(barX, ganttY, barWidth, ganttHeight, 1, 1, "F");
 
     yPos += rowHeight;
   });
@@ -170,7 +179,8 @@ export const generatePDF = (activities: Activity[]) => {
     { align: "center" }
   );
 
-  // Save PDF
-  const fileName = `Cronograma_${format(new Date(), "yyyyMMdd_HHmmss")}.pdf`;
+  // Save PDF with custom filename
+  const dateStr = format(new Date(), "yyyyMMdd");
+  const fileName = `Cronograma ${activityName} - ${windfarmName}_${dateStr}.pdf`;
   pdf.save(fileName);
 };
