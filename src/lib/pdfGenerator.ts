@@ -4,19 +4,7 @@ import { format, differenceInDays, min, max } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import vestasLogo from "@/assets/vestas-logo.png";
 
-export const generatePDF = (activities: Activity[], activityName: string, windfarmName: string) => {
-  // A3 landscape dimensions in mm
-  const pdf = new jsPDF({
-    orientation: "landscape",
-    unit: "mm",
-    format: "a3",
-  });
-
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 15;
-  const contentWidth = pageWidth - 2 * margin;
-
+const drawHeader = (pdf: jsPDF, pageWidth: number, margin: number, activityName: string, windfarmName: string, pageNum: number) => {
   // Add Vestas logo with correct aspect ratio (3.33:1)
   const logoWidth = 40;
   const logoHeight = 18;
@@ -37,28 +25,132 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   pdf.setTextColor(100, 100, 100);
   pdf.setFontSize(10);
   pdf.text(
-    `Page 1`,
+    `Page ${pageNum}`,
     pageWidth - margin,
     margin + 10,
     { align: "right" }
   );
+};
 
-  // Table starting position
-  let yPos = margin + 25;
+const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth: number, projectStart: Date, totalWeeks: number) => {
+  const weekWidth = ganttWidth / totalWeeks;
+  
+  // Draw month/year labels
+  pdf.setFontSize(7);
+  pdf.setFont("helvetica", "bold");
+  pdf.setTextColor(255, 255, 255);
+  
+  let currentMonth = -1;
+  let monthStartX = ganttX;
+  
+  for (let i = 0; i < totalWeeks; i++) {
+    const weekDate = new Date(projectStart);
+    weekDate.setDate(weekDate.getDate() + (i * 7));
+    const weekX = ganttX + (i * weekWidth);
+    
+    // Check if month changed
+    if (weekDate.getMonth() !== currentMonth) {
+      // Draw previous month label if exists
+      if (currentMonth !== -1) {
+        const monthWidth = weekX - monthStartX;
+        const prevMonth = new Date(weekDate);
+        prevMonth.setMonth(prevMonth.getMonth() - 1);
+        const monthLabel = format(prevMonth, "MMM/yyyy");
+        pdf.text(monthLabel, monthStartX + monthWidth / 2, yPos + 4, { align: "center" });
+      }
+      currentMonth = weekDate.getMonth();
+      monthStartX = weekX;
+    }
+  }
+  
+  // Draw last month label
+  const lastWeekDate = new Date(projectStart);
+  lastWeekDate.setDate(lastWeekDate.getDate() + (totalWeeks * 7));
+  const monthLabel = format(lastWeekDate, "MMM/yyyy");
+  pdf.text(monthLabel, monthStartX + (ganttX + ganttWidth - monthStartX) / 2, yPos + 4, { align: "center" });
+  
+  // Draw separator line between months and weeks
+  pdf.setDrawColor(255, 255, 255);
+  pdf.setLineWidth(0.3);
+  pdf.line(ganttX, yPos + 6, ganttX + ganttWidth, yPos + 6);
+  
+  // Draw week numbers with line break
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(6);
+  
+  for (let i = 0; i < totalWeeks; i++) {
+    const weekDate = new Date(projectStart);
+    weekDate.setDate(weekDate.getDate() + (i * 7));
+    const weekX = ganttX + (i * weekWidth);
+    const weekNum = i + 1;
+    
+    // Draw vertical separator
+    if (i > 0) {
+      pdf.setDrawColor(255, 255, 255);
+      pdf.setLineWidth(0.1);
+      pdf.line(weekX, yPos + 6, weekX, yPos + 12);
+    }
+    
+    // Draw "Week" on first line and number on second line
+    pdf.text(`Week`, weekX + weekWidth / 2, yPos + 8.5, { align: "center" });
+    pdf.text(`${weekNum.toString().padStart(2, '0')}`, weekX + weekWidth / 2, yPos + 11, { align: "center" });
+  }
+};
 
-  // Calculate date range for Gantt chart and calendar
-  // Add 2 days buffer before and after
-  const allDates = activities.flatMap(a => [a.startDate, a.endDate]);
-  const minDate = min(allDates);
-  const maxDate = max(allDates);
+export const generatePDF = (activities: Activity[], activityName: string, windfarmName: string) => {
+  // A3 landscape dimensions in mm
+  const pdf = new jsPDF({
+    orientation: "landscape",
+    unit: "mm",
+    format: "a3",
+  });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 15;
+  const contentWidth = pageWidth - 2 * margin;
+  const maxActivitiesPerPage = 50;
   
-  const projectStart = new Date(minDate);
-  projectStart.setDate(projectStart.getDate() - 2);
+  // Calculate number of pages
+  const totalPages = Math.ceil(activities.length / maxActivitiesPerPage);
   
-  const projectEnd = new Date(maxDate);
-  projectEnd.setDate(projectEnd.getDate() + 2);
-  
-  const totalDays = differenceInDays(projectEnd, projectStart) + 1;
+  // Process each page
+  for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+    if (pageIndex > 0) {
+      pdf.addPage();
+    }
+    
+    const pageNum = pageIndex + 1;
+    const startIdx = pageIndex * maxActivitiesPerPage;
+    const endIdx = Math.min(startIdx + maxActivitiesPerPage, activities.length);
+    const pageActivities = activities.slice(startIdx, endIdx);
+    const activitiesCount = pageActivities.length;
+    
+    // Calculate dynamic row height based on number of activities
+    // More activities = smaller rows, fewer activities = larger rows
+    const minRowHeight = 8;
+    const maxRowHeight = 14;
+    const availableHeight = pageHeight - margin - 25 - 12 - 20; // page height - header - calendar - footer
+    let rowHeight = Math.min(maxRowHeight, Math.max(minRowHeight, availableHeight / activitiesCount));
+    
+    // Draw header
+    drawHeader(pdf, pageWidth, margin, activityName, windfarmName, pageNum);
+    
+    // Table starting position
+    let yPos = margin + 25;
+    
+    // Calculate date range for this page's activities
+    const pageDates = pageActivities.flatMap(a => [a.startDate, a.endDate]);
+    const minDate = min(pageDates);
+    const maxDate = max(pageDates);
+    
+    const projectStart = new Date(minDate);
+    projectStart.setDate(projectStart.getDate() - 2);
+    
+    const projectEnd = new Date(maxDate);
+    projectEnd.setDate(projectEnd.getDate() + 2);
+    
+    const totalDays = differenceInDays(projectEnd, projectStart) + 1;
 
   // Table headers
   const colWidths = {
