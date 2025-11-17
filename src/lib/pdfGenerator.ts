@@ -95,8 +95,9 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
       pdf.line(weekX, yPos + 6, weekX, yPos + 14);
     }
     
-    // Draw week number
-    pdf.text(`S${weekNum.toString().padStart(2, '0')}`, weekX + weekWidth / 2, yPos + 10, { align: "center" });
+    // Draw week label with "Week" on top and number below
+    pdf.text("Week", weekX + weekWidth / 2, yPos + 9, { align: "center" });
+    pdf.text(weekNum.toString().padStart(2, '0'), weekX + weekWidth / 2, yPos + 12, { align: "center" });
   }
   
   // Draw subtle month dividers through the entire table
@@ -159,7 +160,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     projectStart.setDate(projectStart.getDate() - 2);
     
     const projectEnd = new Date(maxDate);
-    projectEnd.setDate(projectEnd.getDate() + 2);
+    projectEnd.setDate(projectEnd.getDate() + 10);
     
     const totalDays = differenceInDays(projectEnd, projectStart) + 1;
 
@@ -299,39 +300,6 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       // Only draw label if it fits within the Gantt column
       if (labelX + endDateWidth <= ganttBarX + ganttBarWidth) {
         pdf.text(endDateLabel, labelX, ganttY + ganttHeight / 2 + 1);
-      }
-      
-      // Draw predecessor arrow if exists
-      if (activity.predecessor) {
-        const predecessorActivity = pageActivities.find(a => a.activityDescription === activity.predecessor);
-        if (predecessorActivity) {
-          const predIndex = pageActivities.indexOf(predecessorActivity);
-          const currentIndex = index;
-          
-          // Calculate predecessor bar position
-          const predDaysFromStart = differenceInDays(predecessorActivity.startDate, projectStart);
-          const predActivityDays = differenceInDays(predecessorActivity.endDate, predecessorActivity.startDate) + 1;
-          const predBarX = ganttBarX + (predDaysFromStart / totalDays) * ganttBarWidth;
-          const predBarWidth = (predActivityDays / totalDays) * ganttBarWidth;
-          const predY = yPos - (currentIndex - predIndex) * rowHeight + 3;
-          
-          // Draw arrow: from end of predecessor bar to start of current bar
-          pdf.setDrawColor(100, 100, 100);
-          pdf.setLineWidth(0.3);
-          
-          const startX = predBarX + predBarWidth;
-          const startY = predY + (rowHeight - 6) / 2;
-          const endX = barX;
-          const endY = ganttY;
-          
-          // Draw line from predecessor end to current start
-          pdf.line(startX, startY, endX, endY);
-          
-          // Draw arrowhead
-          const arrowSize = 1.5;
-          pdf.line(endX, endY, endX - arrowSize, endY + arrowSize);
-          pdf.line(endX, endY, endX - arrowSize, endY - arrowSize);
-        }
       }
 
       yPos += rowHeight;
