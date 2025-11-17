@@ -20,6 +20,7 @@ export interface Activity {
   includeWeekends: boolean;
   duration: number;
   predecessor: string;
+  team?: string;
 }
 
 const Schedule = () => {

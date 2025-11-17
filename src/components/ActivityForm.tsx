@@ -36,7 +36,7 @@ export const ActivityForm = ({ onSubmit, onCancel }: ActivityFormProps) => {
       const seq = columns[0]?.trim() || "";
       const functionalDescription = columns[1]?.trim() || "";
       const serialNumber = columns[2]?.trim() || "";
-      // columns[3] is Equipe - we skip it
+      const team = columns[3]?.trim() || "";
       const startDateStr = columns[4]?.trim() || "";
       const endDateStr = columns[5]?.trim() || "";
       const predecessor = columns[6]?.trim() || "";
@@ -73,6 +73,7 @@ export const ActivityForm = ({ onSubmit, onCancel }: ActivityFormProps) => {
           includeWeekends,
           duration,
           predecessor,
+          team: team || undefined,
         });
       } catch (error) {
         console.error(`Error parsing line ${index + 1}:`, line, error);
