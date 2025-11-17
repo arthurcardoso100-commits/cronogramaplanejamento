@@ -78,7 +78,7 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
   pdf.setLineWidth(0.3);
   pdf.line(ganttX, yPos + 6, ganttX + ganttWidth, yPos + 6);
   
-  // Draw week numbers with line break
+  // Draw week numbers
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(6);
   
@@ -95,9 +95,8 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
       pdf.line(weekX, yPos + 6, weekX, yPos + 14);
     }
     
-    // Draw "Week" on first line and number on second line
-    pdf.text(`Week`, weekX + weekWidth / 2, yPos + 8.5, { align: "center" });
-    pdf.text(`${weekNum.toString().padStart(2, '0')}`, weekX + weekWidth / 2, yPos + 11.5, { align: "center" });
+    // Draw week number
+    pdf.text(`S${weekNum.toString().padStart(2, '0')}`, weekX + weekWidth / 2, yPos + 10, { align: "center" });
   }
   
   // Draw subtle month dividers through the entire table
@@ -236,38 +235,39 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       pdf.setFontSize(7);
       xPos = margin + 2;
       
-      // Seq
-      pdf.text(activity.activityDescription, xPos, yPos + rowHeight / 2 + 2, {
+      // Seq - centered vertically
+      const textY = yPos + rowHeight / 2 + 1;
+      pdf.text(activity.activityDescription, xPos, textY, {
         maxWidth: colWidths.seq - 4,
       });
       xPos += colWidths.seq;
       
       // Functional Description
-      pdf.text(activity.functionalDescription, xPos, yPos + rowHeight / 2 + 2, {
+      pdf.text(activity.functionalDescription, xPos, textY, {
         maxWidth: colWidths.functional - 4,
       });
       xPos += colWidths.functional;
       
       // Serial Number
-      pdf.text(activity.serialNumber, xPos, yPos + rowHeight / 2 + 2, {
+      pdf.text(activity.serialNumber, xPos, textY, {
         maxWidth: colWidths.serial - 4,
       });
       xPos += colWidths.serial;
       
       // Start Date
-      pdf.text(format(activity.startDate, "dd/MM/yyyy"), xPos, yPos + rowHeight / 2 + 2);
+      pdf.text(format(activity.startDate, "dd/MM/yyyy"), xPos, textY);
       xPos += colWidths.start;
       
       // End Date
-      pdf.text(format(activity.endDate, "dd/MM/yyyy"), xPos, yPos + rowHeight / 2 + 2);
+      pdf.text(format(activity.endDate, "dd/MM/yyyy"), xPos, textY);
       xPos += colWidths.end;
       
       // Duration
-      pdf.text(`${activity.duration}d`, xPos, yPos + rowHeight / 2 + 2);
+      pdf.text(`${activity.duration}d`, xPos, textY);
       xPos += colWidths.duration;
 
       // Predecessor
-      pdf.text(activity.predecessor || "-", xPos, yPos + rowHeight / 2 + 2, {
+      pdf.text(activity.predecessor || "-", xPos, textY, {
         maxWidth: colWidths.predecessor - 4,
       });
       xPos += colWidths.predecessor;
@@ -289,11 +289,50 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       pdf.setFillColor(59, 130, 246);
       pdf.roundedRect(barX, ganttY, barWidth, ganttHeight, 2, 2, "F");
       
-      // Add end date label at the end of the bar
+      // Add end date label at the end of the bar (only if it fits inside the table)
       pdf.setFontSize(6);
       pdf.setTextColor(60, 60, 60);
       const endDateLabel = format(activity.endDate, "dd/MM/yyyy");
-      pdf.text(endDateLabel, barX + barWidth + 2, ganttY + ganttHeight / 2 + 1);
+      const endDateWidth = pdf.getTextWidth(endDateLabel);
+      const labelX = barX + barWidth + 2;
+      
+      // Only draw label if it fits within the Gantt column
+      if (labelX + endDateWidth <= ganttBarX + ganttBarWidth) {
+        pdf.text(endDateLabel, labelX, ganttY + ganttHeight / 2 + 1);
+      }
+      
+      // Draw predecessor arrow if exists
+      if (activity.predecessor) {
+        const predecessorActivity = pageActivities.find(a => a.activityDescription === activity.predecessor);
+        if (predecessorActivity) {
+          const predIndex = pageActivities.indexOf(predecessorActivity);
+          const currentIndex = index;
+          
+          // Calculate predecessor bar position
+          const predDaysFromStart = differenceInDays(predecessorActivity.startDate, projectStart);
+          const predActivityDays = differenceInDays(predecessorActivity.endDate, predecessorActivity.startDate) + 1;
+          const predBarX = ganttBarX + (predDaysFromStart / totalDays) * ganttBarWidth;
+          const predBarWidth = (predActivityDays / totalDays) * ganttBarWidth;
+          const predY = yPos - (currentIndex - predIndex) * rowHeight + 3;
+          
+          // Draw arrow: from end of predecessor bar to start of current bar
+          pdf.setDrawColor(100, 100, 100);
+          pdf.setLineWidth(0.3);
+          
+          const startX = predBarX + predBarWidth;
+          const startY = predY + (rowHeight - 6) / 2;
+          const endX = barX;
+          const endY = ganttY;
+          
+          // Draw line from predecessor end to current start
+          pdf.line(startX, startY, endX, endY);
+          
+          // Draw arrowhead
+          const arrowSize = 1.5;
+          pdf.line(endX, endY, endX - arrowSize, endY + arrowSize);
+          pdf.line(endX, endY, endX - arrowSize, endY - arrowSize);
+        }
+      }
 
       yPos += rowHeight;
     });
