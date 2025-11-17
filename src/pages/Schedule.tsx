@@ -88,12 +88,20 @@ const Schedule = () => {
         <div className="grid gap-6">
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle>Informações do Cronograma</CardTitle>
-              <CardDescription>
-                Preencha as informações básicas do cronograma
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Informações do Cronograma</CardTitle>
+                  <CardDescription>
+                    Preencha as informações básicas e importe as atividades
+                  </CardDescription>
+                </div>
+                <Button onClick={handleGeneratePDF} variant="default" className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Gerar PDF
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="activityName">Nome da Atividade *</Label>
@@ -114,52 +122,44 @@ const Schedule = () => {
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card className="shadow-lg">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Atividades do Cronograma</CardTitle>
-                  <CardDescription>
-                    Cole os dados do Excel com todas as atividades
-                  </CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  {!showForm && (
-                    <Button onClick={() => setShowForm(true)}>
+              <div className="border-t pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Atividades</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Cole os dados do Excel com todas as atividades
+                    </p>
+                  </div>
+                  {!showForm && activities.length > 0 && (
+                    <Button onClick={() => setShowForm(true)} variant="outline">
                       <Plus className="w-4 h-4 mr-2" />
+                      Importar Mais
+                    </Button>
+                  )}
+                </div>
+                {showForm ? (
+                  <ActivityForm
+                    onSubmit={handleAddActivities}
+                    onCancel={() => setShowForm(false)}
+                  />
+                ) : activities.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Button onClick={() => setShowForm(true)} size="lg">
+                      <Plus className="w-5 h-5 mr-2" />
                       Importar Atividades
                     </Button>
-                  )}
-                  {activities.length > 0 && (
-                    <Button onClick={handleGeneratePDF} variant="default">
-                      <Download className="w-4 h-4 mr-2" />
-                      Gerar PDF
-                    </Button>
-                  )}
-                </div>
+                    <p className="text-sm text-muted-foreground mt-4">
+                      Cole os dados do Excel: Seq | Description | Serial Number | Equipe | Data Início | Data Fim | Predecessora
+                    </p>
+                  </div>
+                ) : (
+                  <ActivityList
+                    activities={activities}
+                    onRemove={handleRemoveActivity}
+                  />
+                )}
               </div>
-            </CardHeader>
-            <CardContent>
-              {showForm ? (
-                <ActivityForm
-                  onSubmit={handleAddActivities}
-                  onCancel={() => setShowForm(false)}
-                />
-              ) : activities.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Wind className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p>Nenhuma atividade adicionada ainda</p>
-                  <p className="text-sm mt-2">Clique em "Importar Atividades" para começar</p>
-                </div>
-              ) : (
-                <ActivityList
-                  activities={activities}
-                  onRemove={handleRemoveActivity}
-                />
-              )}
             </CardContent>
           </Card>
         </div>
