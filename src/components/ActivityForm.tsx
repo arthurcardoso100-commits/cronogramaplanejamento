@@ -23,8 +23,8 @@ export const ActivityForm = ({ onSubmit, onCancel }: ActivityFormProps) => {
     lines.forEach((line, index) => {
       const columns = line.split('\t');
       
-      // Expecting at least: Seq, Description, Serial, Equipe, Start Date, End Date
-      if (columns.length < 6) {
+      // Expecting at least: Seq, Description, Serial, Start Date, End Date
+      if (columns.length < 5) {
         return;
       }
 
@@ -36,10 +36,13 @@ export const ActivityForm = ({ onSubmit, onCancel }: ActivityFormProps) => {
       const seq = columns[0]?.trim() || "";
       const functionalDescription = columns[1]?.trim() || "";
       const serialNumber = columns[2]?.trim() || "";
-      const team = columns[3]?.trim() || "";
-      const startDateStr = columns[4]?.trim() || "";
-      const endDateStr = columns[5]?.trim() || "";
-      const predecessor = columns[6]?.trim() || "";
+      
+      // Check if team column exists (6 or more columns means team is included)
+      const hasTeam = columns.length >= 6;
+      const team = hasTeam ? columns[3]?.trim() : undefined;
+      const startDateStr = hasTeam ? columns[4]?.trim() : columns[3]?.trim();
+      const endDateStr = hasTeam ? columns[5]?.trim() : columns[4]?.trim();
+      const predecessor = hasTeam ? (columns[6]?.trim() || "") : (columns[5]?.trim() || "");
 
       let startDate: Date;
       let endDate: Date;
@@ -108,7 +111,7 @@ export const ActivityForm = ({ onSubmit, onCancel }: ActivityFormProps) => {
       <div className="space-y-2">
         <Label htmlFor="pastedData">Dados do Excel *</Label>
         <p className="text-sm text-muted-foreground">
-          Cole os dados do Excel com as colunas: Seq | Description of functional location | Serial Number | Equipe | Data Início | Data Fim | Predecessora (opcional)
+          Cole os dados do Excel com as colunas: Seq | Description of functional location | Serial Number | Equipe (opcional) | Data Início | Data Fim | Predecessora (opcional)
         </p>
         <Textarea
           id="pastedData"
