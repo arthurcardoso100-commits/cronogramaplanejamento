@@ -162,8 +162,11 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     
     const totalDays = differenceInDays(projectEnd, projectStart) + 1;
 
-    // Table headers
-    const colWidths = {
+    // Check if any activity has team information
+    const hasTeamInfo = pageActivities.some(a => a.team && a.team.trim() !== "");
+
+    // Table headers - adjust column widths based on whether team column is shown
+    const colWidths = hasTeamInfo ? {
       seq: 15,
       functional: 70,
       serial: 30,
@@ -173,6 +176,15 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       duration: 22,
       predecessor: 25,
       gantt: contentWidth - 238,
+    } : {
+      seq: 15,
+      functional: 70,
+      serial: 30,
+      start: 28,
+      end: 28,
+      duration: 22,
+      predecessor: 25,
+      gantt: contentWidth - 218,
     };
 
     // Header background with modern gradient effect
@@ -191,8 +203,13 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     xPos += colWidths.functional;
     pdf.text("Serial Number", xPos, yPos + 8);
     xPos += colWidths.serial;
-    pdf.text("Team", xPos, yPos + 8);
-    xPos += colWidths.team;
+    
+    // Only show Team column if any activity has team info
+    if (hasTeamInfo) {
+      pdf.text("Team", xPos, yPos + 8);
+      xPos += colWidths.team;
+    }
+    
     pdf.text("Start", xPos, yPos + 8);
     xPos += colWidths.start;
     pdf.text("End", xPos, yPos + 8);
@@ -256,11 +273,13 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       });
       xPos += colWidths.serial;
       
-      // Team
-      pdf.text(activity.team || "-", xPos, textY, {
-        maxWidth: colWidths.team - 4,
-      });
-      xPos += colWidths.team;
+      // Team - only show if any activity has team info
+      if (hasTeamInfo) {
+        pdf.text(activity.team || "-", xPos, textY, {
+          maxWidth: colWidths.team - 4,
+        });
+        xPos += colWidths.team;
+      }
       
       // Start Date
       pdf.text(format(activity.startDate, "dd/MM/yyyy"), xPos, textY);
