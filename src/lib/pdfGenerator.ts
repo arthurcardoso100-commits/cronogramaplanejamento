@@ -124,7 +124,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
         const monthWidth = weekX - monthStartX;
         const prevMonth = new Date(weekDate);
         prevMonth.setMonth(prevMonth.getMonth() - 1);
-        const monthLabel = format(prevMonth, "MMM/yyyy", { locale: ptBR });
+        const monthLabel = format(prevMonth, "MMM/yyyy");
         pdf.text(monthLabel, monthStartX + monthWidth / 2, yPos + 4, { align: "center" });
       }
       currentMonth = weekDate.getMonth();
@@ -135,7 +135,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   // Draw last month label
   const lastWeekDate = new Date(projectStart);
   lastWeekDate.setDate(lastWeekDate.getDate() + (totalWeeks * 7));
-  const monthLabel = format(lastWeekDate, "MMM/yyyy", { locale: ptBR });
+  const monthLabel = format(lastWeekDate, "MMM/yyyy");
   pdf.text(monthLabel, monthStartX + (ganttX + ganttWidth - monthStartX) / 2, yPos + 4, { align: "center" });
   
   // Draw separator line between months and weeks
@@ -151,7 +151,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     const weekDate = new Date(projectStart);
     weekDate.setDate(weekDate.getDate() + (i * 7));
     const weekX = ganttX + (i * weekWidth);
-    const weekNum = Math.floor(weekDate.getDate() / 7) + 1;
+    const weekNum = i + 1;
     
     // Draw vertical separator
     if (i > 0) {
@@ -160,7 +160,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       pdf.line(weekX, yPos + 6, weekX, yPos + 12);
     }
     
-    pdf.text(`S${weekNum}`, weekX + weekWidth / 2, yPos + 10, { align: "center" });
+    pdf.text(`Week ${weekNum.toString().padStart(2, '0')}`, weekX + weekWidth / 2, yPos + 10, { align: "center" });
   }
 
   yPos += 12;
@@ -274,7 +274,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
         pdf.setDrawColor(75, 85, 99);
         pdf.setLineWidth(0.4);
         
-        // Arrow exits before the end date label
+        // Arrow exits before the end date label and enters before the bar
         // Horizontal line from predecessor bar end
         const horizontalMidX = predBarEndX + 1;
         pdf.line(predBarEndX, predBarY, horizontalMidX, predBarY);
@@ -282,12 +282,13 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
         // Vertical line
         pdf.line(horizontalMidX, predBarY, horizontalMidX, currentBarY);
         
-        // Horizontal line to current activity start
-        pdf.line(horizontalMidX, currentBarY, barX, currentBarY);
+        // Horizontal line to current activity start (entering before the bar)
+        const arrowTargetX = barX - 2;
+        pdf.line(horizontalMidX, currentBarY, arrowTargetX, currentBarY);
         
         // Draw arrow head pointing to the start of the successor bar
-        pdf.line(barX, currentBarY, barX - 2, currentBarY - 1.5);
-        pdf.line(barX, currentBarY, barX - 2, currentBarY + 1.5);
+        pdf.line(arrowTargetX, currentBarY, arrowTargetX - 2, currentBarY - 1.5);
+        pdf.line(arrowTargetX, currentBarY, arrowTargetX - 2, currentBarY + 1.5);
       }
     }
 
