@@ -47,6 +47,15 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        vestas: {
+          blue: "hsl(var(--vestas-blue))",
+          "blue-light": "hsl(var(--vestas-blue-light))",
+        },
+        wind: {
+          blue: "hsl(var(--wind-blue))",
+        },
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
