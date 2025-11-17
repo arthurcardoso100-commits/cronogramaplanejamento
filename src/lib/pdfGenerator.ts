@@ -32,7 +32,7 @@ const drawHeader = (pdf: jsPDF, pageWidth: number, margin: number, activityName:
   );
 };
 
-const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth: number, projectStart: Date, totalWeeks: number) => {
+const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth: number, projectStart: Date, totalWeeks: number, tableHeight: number) => {
   const weekWidth = ganttWidth / totalWeeks;
   
   // Draw month/year labels
@@ -42,6 +42,7 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
   
   let currentMonth = -1;
   let monthStartX = ganttX;
+  const monthBoundaries: number[] = [];
   
   for (let i = 0; i < totalWeeks; i++) {
     const weekDate = new Date(projectStart);
@@ -57,6 +58,7 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
         prevMonth.setMonth(prevMonth.getMonth() - 1);
         const monthLabel = format(prevMonth, "MMM/yyyy");
         pdf.text(monthLabel, monthStartX + monthWidth / 2, yPos + 4, { align: "center" });
+        monthBoundaries.push(weekX);
       }
       currentMonth = weekDate.getMonth();
       monthStartX = weekX;
@@ -68,6 +70,8 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
   lastWeekDate.setDate(lastWeekDate.getDate() + (totalWeeks * 7));
   const monthLabel = format(lastWeekDate, "MMM/yyyy");
   pdf.text(monthLabel, monthStartX + (ganttX + ganttWidth - monthStartX) / 2, yPos + 4, { align: "center" });
+  
+  return monthBoundaries;
   
   // Draw separator line between months and weeks
   pdf.setDrawColor(255, 255, 255);
@@ -95,6 +99,15 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
     pdf.text(`Week`, weekX + weekWidth / 2, yPos + 8.5, { align: "center" });
     pdf.text(`${weekNum.toString().padStart(2, '0')}`, weekX + weekWidth / 2, yPos + 11.5, { align: "center" });
   }
+  
+  // Draw subtle month dividers through the entire table
+  pdf.setDrawColor(200, 200, 200);
+  pdf.setLineWidth(0.3);
+  monthBoundaries.forEach(boundaryX => {
+    pdf.line(boundaryX, yPos, boundaryX, yPos + 14 + tableHeight);
+  });
+  
+  return monthBoundaries;
 };
 
 export const generatePDF = (activities: Activity[], activityName: string, windfarmName: string) => {
@@ -110,6 +123,9 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   const margin = 15;
   const contentWidth = pageWidth - 2 * margin;
   const maxActivitiesPerPage = 50;
+  const headerHeight = 25;
+  const calendarHeight = 14;
+  const availableHeight = pageHeight - (2 * margin) - headerHeight - calendarHeight;
   
   // Calculate number of pages
   const totalPages = Math.ceil(activities.length / maxActivitiesPerPage);
@@ -126,18 +142,14 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     const pageActivities = activities.slice(startIdx, endIdx);
     const activitiesCount = pageActivities.length;
     
-    // Calculate dynamic row height based on number of activities
-    // More activities = smaller rows, fewer activities = larger rows
-    const minRowHeight = 8;
-    const maxRowHeight = 14;
-    const availableHeight = pageHeight - margin - 25 - 14 - 20; // page height - header - calendar - footer
-    let rowHeight = Math.min(maxRowHeight, Math.max(minRowHeight, availableHeight / activitiesCount));
+    // Calculate dynamic row height to fit activities in available space
+    const rowHeight = availableHeight / maxActivitiesPerPage;
     
     // Draw header
     drawHeader(pdf, pageWidth, margin, activityName, windfarmName, pageNum);
     
     // Table starting position
-    let yPos = margin + 25;
+    let yPos = margin + headerHeight;
     
     // Calculate date range for this page's activities
     const pageDates = pageActivities.flatMap(a => [a.startDate, a.endDate]);
@@ -196,8 +208,11 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     // Calculate weeks to show
     const totalWeeks = Math.ceil(totalDays / 7);
     
-    // Draw calendar header
-    drawCalendarHeader(pdf, yPos, ganttX, ganttWidth, projectStart, totalWeeks);
+    // Calculate table height
+    const tableHeight = rowHeight * activitiesCount;
+    
+    // Draw calendar header and get month boundaries
+    const monthBoundaries = drawCalendarHeader(pdf, yPos, ganttX, ganttWidth, projectStart, totalWeeks, tableHeight);
 
     yPos += 14;
 
@@ -282,16 +297,6 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
 
       yPos += rowHeight;
     });
-
-    // Footer with generation timestamp in center
-    pdf.setFontSize(8);
-    pdf.setTextColor(120, 120, 120);
-    pdf.text(
-      `Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
-      pageWidth / 2,
-      pageHeight - 10,
-      { align: "center" }
-    );
   }
 
   // Save PDF with custom filename
