@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import { Activity } from "@/pages/Schedule";
-import { format, differenceInDays, min, max } from "date-fns";
+import { format, differenceInDays, min, max, getWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import vestasLogo from "@/assets/vestas-logo.png";
 
@@ -84,7 +84,7 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
     const weekDate = new Date(projectStart);
     weekDate.setDate(weekDate.getDate() + (i * 7));
     const weekX = ganttX + (i * weekWidth);
-    const weekNum = i + 1;
+    const weekNum = getWeek(weekDate); // Get actual week number of the year
     
     // Draw vertical separator
     if (i > 0) {
@@ -98,9 +98,9 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
     pdf.text(weekNum.toString().padStart(2, '0'), weekX + weekWidth / 2, yPos + 13, { align: "center" });
   }
   
-  // Draw subtle month dividers through the entire table
-  pdf.setDrawColor(200, 200, 200);
-  pdf.setLineWidth(0.3);
+  // Draw subtle minimalist month dividers through the entire table
+  pdf.setDrawColor(220, 220, 220);
+  pdf.setLineWidth(0.15);
   monthBoundaries.forEach(boundaryX => {
     pdf.line(boundaryX, yPos, boundaryX, yPos + 16 + tableHeight);
   });
