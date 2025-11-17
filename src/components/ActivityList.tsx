@@ -21,14 +21,15 @@ export const ActivityList = ({ activities, onRemove }: ActivityListProps) => {
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-3">
                 <span className="font-mono text-sm bg-primary/10 text-primary px-2 py-1 rounded">
-                  {activity.serialNumber}
+                  Seq {activity.activityDescription}
                 </span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm font-medium">
                   {activity.functionalDescription}
                 </span>
+                <span className="text-sm text-muted-foreground">
+                  Serial: {activity.serialNumber}
+                </span>
               </div>
-              
-              <p className="text-sm font-medium">{activity.activityDescription}</p>
               
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">

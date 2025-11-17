@@ -23,16 +23,23 @@ export const ActivityForm = ({ onSubmit, onCancel }: ActivityFormProps) => {
     lines.forEach((line, index) => {
       const columns = line.split('\t');
       
-      if (columns.length < 5) {
+      // Expecting at least: Seq, Description, Serial, Equipe, Start Date, End Date
+      if (columns.length < 6) {
         return;
       }
 
-      const serialNumber = columns[0]?.trim() || "";
+      // Skip header line if it contains "Seq" or "Description"
+      if (index === 0 && (columns[0]?.includes('Seq') || columns[1]?.includes('Description'))) {
+        return;
+      }
+
+      const seq = columns[0]?.trim() || "";
       const functionalDescription = columns[1]?.trim() || "";
-      const activityDescription = columns[2]?.trim() || "";
-      const startDateStr = columns[3]?.trim() || "";
-      const endDateStr = columns[4]?.trim() || "";
-      const predecessor = columns[5]?.trim() || "";
+      const serialNumber = columns[2]?.trim() || "";
+      // columns[3] is Equipe - we skip it
+      const startDateStr = columns[4]?.trim() || "";
+      const endDateStr = columns[5]?.trim() || "";
+      const predecessor = columns[6]?.trim() || "";
 
       let startDate: Date;
       let endDate: Date;
@@ -60,7 +67,7 @@ export const ActivityForm = ({ onSubmit, onCancel }: ActivityFormProps) => {
           id: `${Date.now()}-${index}`,
           serialNumber,
           functionalDescription,
-          activityDescription,
+          activityDescription: seq, // Store seq in activityDescription for display
           startDate,
           endDate,
           includeWeekends,
@@ -100,13 +107,13 @@ export const ActivityForm = ({ onSubmit, onCancel }: ActivityFormProps) => {
       <div className="space-y-2">
         <Label htmlFor="pastedData">Dados do Excel *</Label>
         <p className="text-sm text-muted-foreground">
-          Cole os dados do Excel com as colunas: Serial Number | Functional Description | Descrição da Atividade | Data Início | Data Fim | Predecessor (opcional)
+          Cole os dados do Excel com as colunas: Seq | Description of functional location | Serial Number | Equipe | Data Início | Data Fim | Predecessora (opcional)
         </p>
         <Textarea
           id="pastedData"
           value={pastedData}
           onChange={(e) => setPastedData(e.target.value)}
-          placeholder="Cole aqui os dados do Excel (use Ctrl+V)&#10;&#10;Exemplo:&#10;WTG-01	Foundation Works	Escavação e preparação do terreno	01/01/2024	15/01/2024	&#10;WTG-02	Foundation Works	Concretagem da fundação	16/01/2024	30/01/2024	WTG-01"
+          placeholder="Cole aqui os dados do Excel (use Ctrl+V)&#10;&#10;Exemplo:&#10;1	XL01 - HONDA V112_3.0MW	207566	Equipe 1	23/03/2026	24/03/2026	&#10;2	XL02 - HONDA V112_3.0MW	207567	Equipe 2	23/03/2026	24/03/2026	1"
           rows={12}
           required
           className="font-mono text-sm"
