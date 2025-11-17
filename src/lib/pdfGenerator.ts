@@ -71,8 +71,6 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
   const monthLabel = format(lastWeekDate, "MMM/yyyy");
   pdf.text(monthLabel, monthStartX + (ganttX + ganttWidth - monthStartX) / 2, yPos + 4, { align: "center" });
   
-  return monthBoundaries;
-  
   // Draw separator line between months and weeks
   pdf.setDrawColor(255, 255, 255);
   pdf.setLineWidth(0.3);
@@ -92,19 +90,19 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
     if (i > 0) {
       pdf.setDrawColor(255, 255, 255);
       pdf.setLineWidth(0.1);
-      pdf.line(weekX, yPos + 6, weekX, yPos + 14);
+      pdf.line(weekX, yPos + 6, weekX, yPos + 16);
     }
     
     // Draw week label with "Week" on top and number below
     pdf.text("Week", weekX + weekWidth / 2, yPos + 9, { align: "center" });
-    pdf.text(weekNum.toString().padStart(2, '0'), weekX + weekWidth / 2, yPos + 12, { align: "center" });
+    pdf.text(weekNum.toString().padStart(2, '0'), weekX + weekWidth / 2, yPos + 13, { align: "center" });
   }
   
   // Draw subtle month dividers through the entire table
   pdf.setDrawColor(200, 200, 200);
   pdf.setLineWidth(0.3);
   monthBoundaries.forEach(boundaryX => {
-    pdf.line(boundaryX, yPos, boundaryX, yPos + 14 + tableHeight);
+    pdf.line(boundaryX, yPos, boundaryX, yPos + 16 + tableHeight);
   });
   
   return monthBoundaries;
@@ -124,7 +122,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   const contentWidth = pageWidth - 2 * margin;
   const maxActivitiesPerPage = 50;
   const headerHeight = 25;
-  const calendarHeight = 14;
+  const calendarHeight = 16;
   const availableHeight = pageHeight - (2 * margin) - headerHeight - calendarHeight;
   
   // Calculate number of pages
@@ -178,7 +176,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
 
     // Header background with modern gradient effect
     pdf.setFillColor(33, 87, 138);
-    pdf.rect(margin, yPos, contentWidth, 14, "F");
+    pdf.rect(margin, yPos, contentWidth, 16, "F");
 
     // Header text
     pdf.setTextColor(255, 255, 255);
@@ -214,7 +212,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     // Draw calendar header and get month boundaries
     const monthBoundaries = drawCalendarHeader(pdf, yPos, ganttX, ganttWidth, projectStart, totalWeeks, tableHeight);
 
-    yPos += 14;
+    yPos += 16;
 
     // Table rows
     pdf.setFont("helvetica", "normal");
