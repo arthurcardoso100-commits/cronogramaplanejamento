@@ -44,16 +44,16 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   // Table starting position
   let yPos = margin + 25;
 
-  // Table headers with predecessor column
+  // Table headers
   const colWidths = {
+    seq: 15,
+    functional: 70,
     serial: 30,
-    functional: 50,
-    activity: 70,
     start: 25,
     end: 25,
     duration: 20,
     predecessor: 25,
-    gantt: contentWidth - 245,
+    gantt: contentWidth - 210,
   };
 
   // Header background
@@ -66,12 +66,12 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   pdf.setFont("helvetica", "bold");
   
   let xPos = margin + 2;
-  pdf.text("Serial", xPos, yPos + 7);
-  xPos += colWidths.serial;
-  pdf.text("Functional", xPos, yPos + 7);
+  pdf.text("Seq", xPos, yPos + 7);
+  xPos += colWidths.seq;
+  pdf.text("Description of functional location", xPos, yPos + 7);
   xPos += colWidths.functional;
-  pdf.text("Descrição", xPos, yPos + 7);
-  xPos += colWidths.activity;
+  pdf.text("Serial Number", xPos, yPos + 7);
+  xPos += colWidths.serial;
   pdf.text("Início", xPos, yPos + 7);
   xPos += colWidths.start;
   pdf.text("Fim", xPos, yPos + 7);
@@ -94,6 +94,12 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   pdf.setFont("helvetica", "normal");
   pdf.setTextColor(60, 60, 60);
   
+  // Create a map of activities by their seq number for predecessor lookup
+  const activityMap = new Map<string, { index: number; activity: Activity }>();
+  activities.forEach((activity, index) => {
+    activityMap.set(activity.activityDescription, { index, activity });
+  });
+  
   activities.forEach((activity, index) => {
     const rowHeight = 12;
     
@@ -111,11 +117,11 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     pdf.setFontSize(7);
     xPos = margin + 2;
     
-    // Serial Number
-    pdf.text(activity.serialNumber, xPos, yPos + 8, {
-      maxWidth: colWidths.serial - 4,
+    // Seq
+    pdf.text(activity.activityDescription, xPos, yPos + 8, {
+      maxWidth: colWidths.seq - 4,
     });
-    xPos += colWidths.serial;
+    xPos += colWidths.seq;
     
     // Functional Description
     pdf.text(activity.functionalDescription, xPos, yPos + 8, {
@@ -123,13 +129,11 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     });
     xPos += colWidths.functional;
     
-    // Activity Description
-    const lines = pdf.splitTextToSize(
-      activity.activityDescription,
-      colWidths.activity - 4
-    );
-    pdf.text(lines[0], xPos, yPos + 8);
-    xPos += colWidths.activity;
+    // Serial Number
+    pdf.text(activity.serialNumber, xPos, yPos + 8, {
+      maxWidth: colWidths.serial - 4,
+    });
+    xPos += colWidths.serial;
     
     // Start Date
     pdf.text(format(activity.startDate, "dd/MM/yy"), xPos, yPos + 8);
@@ -165,6 +169,41 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     // Draw Gantt bar
     pdf.setFillColor(52, 168, 211);
     pdf.roundedRect(barX, ganttY, barWidth, ganttHeight, 1, 1, "F");
+
+    // Draw predecessor arrow if exists
+    if (activity.predecessor && activity.predecessor !== "-") {
+      const predecessorData = activityMap.get(activity.predecessor);
+      if (predecessorData) {
+        const predActivity = predecessorData.activity;
+        const predIndex = predecessorData.index;
+        
+        // Calculate predecessor bar end position
+        const predDaysFromStart = differenceInDays(predActivity.endDate, projectStart);
+        const predBarEndX = ganttX + (predDaysFromStart / totalDays) * ganttWidth;
+        const predBarY = margin + 35 + (predIndex * rowHeight) + rowHeight / 2;
+        
+        // Current activity bar start position
+        const currentBarY = ganttY + ganttHeight / 2;
+        
+        // Draw arrow (MS Project style: horizontal then vertical then horizontal)
+        pdf.setDrawColor(100, 100, 100);
+        pdf.setLineWidth(0.3);
+        
+        // Horizontal line from predecessor end
+        const horizontalMidX = predBarEndX + 3;
+        pdf.line(predBarEndX, predBarY, horizontalMidX, predBarY);
+        
+        // Vertical line
+        pdf.line(horizontalMidX, predBarY, horizontalMidX, currentBarY);
+        
+        // Horizontal line to current activity
+        pdf.line(horizontalMidX, currentBarY, barX, currentBarY);
+        
+        // Draw arrow head
+        pdf.line(barX, currentBarY, barX - 1.5, currentBarY - 1);
+        pdf.line(barX, currentBarY, barX - 1.5, currentBarY + 1);
+      }
+    }
 
     yPos += rowHeight;
   });
