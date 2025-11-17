@@ -17,8 +17,10 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   const margin = 15;
   const contentWidth = pageWidth - 2 * margin;
 
-  // Add Vestas logo
-  pdf.addImage(vestasLogo, "PNG", margin, margin, 50, 12);
+  // Add Vestas logo with correct aspect ratio
+  const logoWidth = 40;
+  const logoHeight = 12;
+  pdf.addImage(vestasLogo, "PNG", margin, margin, logoWidth, logoHeight);
 
   // Title
   pdf.setTextColor(33, 87, 138);
@@ -31,11 +33,11 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     { align: "center" }
   );
 
-  // Date
+  // Page number in top right
   pdf.setTextColor(100, 100, 100);
   pdf.setFontSize(10);
   pdf.text(
-    `Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
+    `Page 1`,
     pageWidth - margin,
     margin + 10,
     { align: "right" }
@@ -44,21 +46,27 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   // Table starting position
   let yPos = margin + 25;
 
+  // Calculate date range for Gantt chart and calendar
+  const allDates = activities.flatMap(a => [a.startDate, a.endDate]);
+  const projectStart = min(allDates);
+  const projectEnd = max(allDates);
+  const totalDays = differenceInDays(projectEnd, projectStart) + 1;
+
   // Table headers
   const colWidths = {
     seq: 15,
     functional: 70,
     serial: 30,
-    start: 25,
-    end: 25,
-    duration: 20,
+    start: 28,
+    end: 28,
+    duration: 22,
     predecessor: 25,
-    gantt: contentWidth - 210,
+    gantt: contentWidth - 218,
   };
 
-  // Header background
+  // Header background with modern gradient effect
   pdf.setFillColor(33, 87, 138);
-  pdf.rect(margin, yPos, contentWidth, 10, "F");
+  pdf.rect(margin, yPos, contentWidth, 12, "F");
 
   // Header text
   pdf.setTextColor(255, 255, 255);
@@ -66,29 +74,47 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   pdf.setFont("helvetica", "bold");
   
   let xPos = margin + 2;
-  pdf.text("Seq", xPos, yPos + 7);
+  pdf.text("ID", xPos, yPos + 8);
   xPos += colWidths.seq;
-  pdf.text("Description of functional location", xPos, yPos + 7);
+  pdf.text("Description of functional location", xPos, yPos + 8);
   xPos += colWidths.functional;
-  pdf.text("Serial Number", xPos, yPos + 7);
+  pdf.text("Serial Number", xPos, yPos + 8);
   xPos += colWidths.serial;
-  pdf.text("Início", xPos, yPos + 7);
+  pdf.text("Start", xPos, yPos + 8);
   xPos += colWidths.start;
-  pdf.text("Fim", xPos, yPos + 7);
+  pdf.text("End", xPos, yPos + 8);
   xPos += colWidths.end;
-  pdf.text("Dur.", xPos, yPos + 7);
+  pdf.text("Duration", xPos, yPos + 8);
   xPos += colWidths.duration;
-  pdf.text("Pred.", xPos, yPos + 7);
+  pdf.text("Pred.", xPos, yPos + 8);
   xPos += colWidths.predecessor;
-  pdf.text("Gantt", xPos, yPos + 7);
+  
+  // Draw calendar header for Gantt column
+  const ganttX = xPos;
+  const ganttWidth = colWidths.gantt - 4;
+  
+  // Draw calendar dates
+  pdf.setFontSize(6);
+  const daysToShow = Math.min(totalDays, 30); // Show up to 30 days
+  const dayWidth = ganttWidth / daysToShow;
+  
+  for (let i = 0; i < daysToShow; i++) {
+    const currentDate = new Date(projectStart);
+    currentDate.setDate(currentDate.getDate() + Math.floor((i / daysToShow) * totalDays));
+    const dateStr = format(currentDate, "dd/MM");
+    const dayX = ganttX + (i * dayWidth);
+    
+    // Draw vertical separator
+    if (i > 0) {
+      pdf.setDrawColor(255, 255, 255);
+      pdf.setLineWidth(0.1);
+      pdf.line(dayX, yPos, dayX, yPos + 12);
+    }
+    
+    pdf.text(dateStr, dayX + dayWidth / 2, yPos + 8, { align: "center" });
+  }
 
-  yPos += 10;
-
-  // Calculate date range for Gantt chart
-  const allDates = activities.flatMap(a => [a.startDate, a.endDate]);
-  const projectStart = min(allDates);
-  const projectEnd = max(allDates);
-  const totalDays = differenceInDays(projectEnd, projectStart) + 1;
+  yPos += 12;
 
   // Table rows
   pdf.setFont("helvetica", "normal");
@@ -101,16 +127,17 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
   });
   
   activities.forEach((activity, index) => {
-    const rowHeight = 12;
+    const rowHeight = 14;
     
-    // Alternate row colors
+    // Alternate row colors with modern styling
     if (index % 2 === 0) {
-      pdf.setFillColor(245, 247, 250);
+      pdf.setFillColor(248, 250, 252);
       pdf.rect(margin, yPos, contentWidth, rowHeight, "F");
     }
 
-    // Draw borders
-    pdf.setDrawColor(200, 200, 200);
+    // Draw subtle borders
+    pdf.setDrawColor(226, 232, 240);
+    pdf.setLineWidth(0.2);
     pdf.rect(margin, yPos, contentWidth, rowHeight);
 
     // Row text
@@ -136,11 +163,11 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     xPos += colWidths.serial;
     
     // Start Date
-    pdf.text(format(activity.startDate, "dd/MM/yy"), xPos, yPos + 8);
+    pdf.text(format(activity.startDate, "dd/MM/yyyy"), xPos, yPos + 9);
     xPos += colWidths.start;
     
     // End Date
-    pdf.text(format(activity.endDate, "dd/MM/yy"), xPos, yPos + 8);
+    pdf.text(format(activity.endDate, "dd/MM/yyyy"), xPos, yPos + 9);
     xPos += colWidths.end;
     
     // Duration
@@ -156,8 +183,8 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     // Gantt bar
     const ganttX = xPos;
     const ganttWidth = colWidths.gantt - 4;
-    const ganttY = yPos + 2;
-    const ganttHeight = rowHeight - 4;
+    const ganttY = yPos + 3;
+    const ganttHeight = rowHeight - 6;
 
     // Calculate bar position and width
     const daysFromStart = differenceInDays(activity.startDate, projectStart);
@@ -166,9 +193,19 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     const barX = ganttX + (daysFromStart / totalDays) * ganttWidth;
     const barWidth = (activityDays / totalDays) * ganttWidth;
 
-    // Draw Gantt bar
-    pdf.setFillColor(52, 168, 211);
-    pdf.roundedRect(barX, ganttY, barWidth, ganttHeight, 1, 1, "F");
+    // Draw modern Gantt bar with gradient effect
+    pdf.setFillColor(59, 130, 246); // Modern blue
+    pdf.roundedRect(barX, ganttY, barWidth, ganttHeight, 2, 2, "F");
+    
+    // Add subtle shadow effect
+    pdf.setFillColor(59, 130, 246, 0.3);
+    pdf.roundedRect(barX, ganttY + ganttHeight - 1, barWidth, 1, 2, 2, "F");
+    
+    // Add end date label at the end of the bar
+    pdf.setFontSize(6);
+    pdf.setTextColor(60, 60, 60);
+    const endDateLabel = format(activity.endDate, "dd/MM/yyyy");
+    pdf.text(endDateLabel, barX + barWidth + 2, ganttY + ganttHeight / 2 + 1);
 
     // Draw predecessor arrow if exists
     if (activity.predecessor && activity.predecessor !== "-") {
@@ -179,15 +216,18 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
         
         // Calculate predecessor bar end position
         const predDaysFromStart = differenceInDays(predActivity.endDate, projectStart);
-        const predBarEndX = ganttX + (predDaysFromStart / totalDays) * ganttWidth;
-        const predBarY = margin + 35 + (predIndex * rowHeight) + rowHeight / 2;
+        const predActivityDays = differenceInDays(predActivity.endDate, predActivity.startDate) + 1;
+        const predBarX = ganttX + (predDaysFromStart / totalDays) * ganttWidth;
+        const predBarWidth = (predActivityDays / totalDays) * ganttWidth;
+        const predBarEndX = predBarX + predBarWidth;
+        const predBarY = margin + 37 + (predIndex * rowHeight) + rowHeight / 2;
         
         // Current activity bar start position
         const currentBarY = ganttY + ganttHeight / 2;
         
-        // Draw arrow (MS Project style: horizontal then vertical then horizontal)
-        pdf.setDrawColor(100, 100, 100);
-        pdf.setLineWidth(0.3);
+        // Draw arrow (MS Project style: from end of predecessor bar)
+        pdf.setDrawColor(75, 85, 99);
+        pdf.setLineWidth(0.4);
         
         // Horizontal line from predecessor end
         const horizontalMidX = predBarEndX + 3;
@@ -199,20 +239,20 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
         // Horizontal line to current activity
         pdf.line(horizontalMidX, currentBarY, barX, currentBarY);
         
-        // Draw arrow head
-        pdf.line(barX, currentBarY, barX - 1.5, currentBarY - 1);
-        pdf.line(barX, currentBarY, barX - 1.5, currentBarY + 1);
+        // Draw arrow head (larger and more visible)
+        pdf.line(barX, currentBarY, barX - 2, currentBarY - 1.5);
+        pdf.line(barX, currentBarY, barX - 2, currentBarY + 1.5);
       }
     }
 
     yPos += rowHeight;
   });
 
-  // Footer
+  // Footer with generation timestamp in center
   pdf.setFontSize(8);
-  pdf.setTextColor(150, 150, 150);
+  pdf.setTextColor(120, 120, 120);
   pdf.text(
-    "Vestas Wind Systems A/S - Planejamento",
+    `Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
     pageWidth / 2,
     pageHeight - 10,
     { align: "center" }
