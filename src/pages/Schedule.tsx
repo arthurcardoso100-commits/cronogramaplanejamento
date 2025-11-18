@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wind, Download, Plus, Trash2, LogOut } from "lucide-react";
+import { Wind, Download, Plus, Trash2, LogOut, ArrowLeft } from "lucide-react";
 import { ActivityForm } from "@/components/ActivityForm";
 import { ActivityList } from "@/components/ActivityList";
 import { generatePDF } from "@/lib/pdfGenerator";
@@ -72,6 +72,9 @@ const Schedule = () => {
       <div className="container mx-auto p-4 md:p-8 max-w-7xl">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
+            <Button variant="outline" size="icon" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
             <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center">
               <Wind className="w-6 h-6 text-primary" />
             </div>
