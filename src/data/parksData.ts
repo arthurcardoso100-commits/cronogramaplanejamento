@@ -1,4 +1,5 @@
-// Auto-generated from FERIADOS.xlsx
+import parksDataJson from './parksData.json';
+
 export interface SerialData {
   serialNumber: string;
   parkName: string;
@@ -66,40 +67,19 @@ export const PARK_NAMES = [
   "Vilas IV"
 ];
 
-// Holidays by park (extracted from FERIADOS.xlsx - Feriados tab)
-export const HOLIDAYS: HolidayData = {
-  "Alegria": [
-    "01/01/2026", "21/04/2026", "01/05/2026", "12/06/2026", "02/07/2026",
-    "07/09/2026", "12/10/2026", "28/10/2026", "02/11/2026", "15/11/2026", "25/12/2026"
-  ],
-  "Angicos": [
-    "01/01/2026", "21/04/2026", "01/05/2026", "12/06/2026", "02/07/2026",
-    "07/09/2026", "12/10/2026", "28/10/2026", "02/11/2026", "15/11/2026", "25/12/2026"
-  ],
-  "Aventura": [
-    "01/01/2026", "21/04/2026", "01/05/2026", "12/06/2026", "02/07/2026",
-    "07/09/2026", "12/10/2026", "28/10/2026", "02/11/2026", "15/11/2026", "25/12/2026"
-  ],
-  "Amontada": [
-    "01/01/2026", "21/04/2026", "01/05/2026", "12/06/2026", "02/07/2026",
-    "07/09/2026", "12/10/2026", "28/10/2026", "02/11/2026", "15/11/2026", "25/12/2026"
-  ],
-  "Icaraí": [
-    "01/01/2026", "21/04/2026", "01/05/2026", "12/06/2026", "02/07/2026",
-    "07/09/2026", "12/10/2026", "28/10/2026", "02/11/2026", "15/11/2026", "25/12/2026"
-  ],
-  // Add all other parks with similar structure - keeping this abbreviated for now
-  // This will be populated from the Excel data
-};
+// Load holidays from JSON
+export const HOLIDAYS: HolidayData = parksDataJson.holidays;
 
-// Serial numbers by park (extracted from FERIADOS.xlsx - Serial tab)
-// Format: serialNumber, parkName, functionalLocation
-export const SERIALS_DATA: SerialData[] = [
-  // Sample data - this will be populated with all data from Excel
-  { serialNumber: "241269", parkName: "Monte Verde", functionalLocation: "Monte Verde I (EDPR) 16 V150 Pos 001" },
-  { serialNumber: "241270", parkName: "Monte Verde", functionalLocation: "Monte Verde I (EDPR) 16 V150 Pos 002" },
-  // ... more entries
-];
+// Load serials from JSON and transform to array format
+const serialsFromJson = parksDataJson.serials as Record<string, Array<{serialNumber: string, functionalLocation: string}>>;
+
+export const SERIALS_DATA: SerialData[] = Object.entries(serialsFromJson).flatMap(([parkName, serials]) =>
+  serials.map(s => ({
+    serialNumber: s.serialNumber,
+    parkName,
+    functionalLocation: s.functionalLocation
+  }))
+);
 
 export const getSerialsByPark = (parkName: string): SerialData[] => {
   return SERIALS_DATA
