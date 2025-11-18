@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { PARK_NAMES, getSerialsByPark, getHolidaysByPark, SerialData } from "@/data/parksData";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, addDays } from "date-fns";
+import * as XLSX from 'xlsx';
 
 interface SequencedSerial extends SerialData {
   sequence: number;
@@ -361,22 +362,28 @@ const MaintenanceAnalysis = () => {
       return;
     }
 
-    const header = "Seq\tFunctional Location\tSerial Number\tEquipe\tData Início\tData Fim\n";
-    const rows = schedule.map(entry => 
-      `${entry.seq}\t${entry.functionalLocation}\t${entry.serialNumber}\t${entry.team}\t${entry.startDate}\t${entry.endDate}`
-    ).join('\n');
+    // Prepare data for Excel
+    const worksheetData = [
+      ['Seq', 'Functional Location', 'Serial Number', 'Equipe', 'Data Início', 'Data Fim'],
+      ...schedule.map(entry => [
+        entry.seq,
+        entry.functionalLocation,
+        entry.serialNumber,
+        entry.team,
+        entry.startDate,
+        entry.endDate
+      ])
+    ];
 
-    const blob = new Blob([header + rows], { type: 'text/tab-separated-values' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `cronograma_${parkName}_${format(new Date(), 'dd-MM-yyyy')}.tsv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Create workbook and worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Cronograma');
+
+    // Generate Excel file and download
+    XLSX.writeFile(workbook, `cronograma_${parkName}_${format(new Date(), 'dd-MM-yyyy')}.xlsx`);
     
-    toast.success("Arquivo exportado com sucesso");
+    toast.success("Arquivo Excel exportado com sucesso");
   };
 
   return (
@@ -623,7 +630,7 @@ const MaintenanceAnalysis = () => {
                     </Button>
                     <Button onClick={handleExportToExcel} variant="default">
                       <Download className="w-4 h-4 mr-2" />
-                      Exportar TSV
+                      Exportar Excel
                     </Button>
                   </div>
                 </div>
