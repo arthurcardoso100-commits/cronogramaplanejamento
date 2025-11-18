@@ -32,7 +32,9 @@ const MaintenanceAnalysis = () => {
   const [startDate, setStartDate] = useState("");
   const [teamCount, setTeamCount] = useState<number>(1);
   const [duration, setDuration] = useState<number>(1);
-  const [includeWeekends, setIncludeWeekends] = useState(false);
+  const [includeSaturdays, setIncludeSaturdays] = useState(false);
+  const [includeSundays, setIncludeSundays] = useState(false);
+  const [includeHolidays, setIncludeHolidays] = useState(false);
   const [serials, setSerials] = useState<SequencedSerial[]>([]);
   const [holidays, setHolidays] = useState<Date[]>([]);
   const [showSerials, setShowSerials] = useState(false);
@@ -109,14 +111,19 @@ const MaintenanceAnalysis = () => {
       currentDate = addDays(currentDate, 1);
       
       const dayOfWeek = currentDate.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isSaturday = dayOfWeek === 6;
+      const isSunday = dayOfWeek === 0;
       const isHoliday = holidays.some(h => 
         h.getDate() === currentDate.getDate() &&
         h.getMonth() === currentDate.getMonth() &&
         h.getFullYear() === currentDate.getFullYear()
       );
 
-      if (includeWeekends || (!isWeekend && !isHoliday)) {
+      const skipSaturday = isSaturday && !includeSaturdays;
+      const skipSunday = isSunday && !includeSundays;
+      const skipHoliday = isHoliday && !includeHolidays;
+
+      if (!skipSaturday && !skipSunday && !skipHoliday) {
         daysAdded++;
       }
     }
@@ -198,7 +205,7 @@ const MaintenanceAnalysis = () => {
     <div className="min-h-screen bg-gradient-to-br from-secondary via-background to-vestas-blue-light">
       <div className="container mx-auto p-4 md:p-8 max-w-7xl">
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="outline" onClick={() => navigate("/dashboard")}>
+          <Button variant="outline" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
@@ -281,13 +288,34 @@ const MaintenanceAnalysis = () => {
                   />
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="weekends"
-                    checked={includeWeekends}
-                    onCheckedChange={setIncludeWeekends}
-                  />
-                  <Label htmlFor="weekends">Trabalhar aos sábados, domingos e feriados</Label>
+                <div className="space-y-3">
+                  <Label>Dias de Trabalho</Label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="saturdays"
+                        checked={includeSaturdays}
+                        onCheckedChange={setIncludeSaturdays}
+                      />
+                      <Label htmlFor="saturdays">Trabalhar aos sábados</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="sundays"
+                        checked={includeSundays}
+                        onCheckedChange={setIncludeSundays}
+                      />
+                      <Label htmlFor="sundays">Trabalhar aos domingos</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="holidays"
+                        checked={includeHolidays}
+                        onCheckedChange={setIncludeHolidays}
+                      />
+                      <Label htmlFor="holidays">Trabalhar em feriados</Label>
+                    </div>
+                  </div>
                 </div>
               </div>
 
