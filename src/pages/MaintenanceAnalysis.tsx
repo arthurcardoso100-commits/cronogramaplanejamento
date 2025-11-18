@@ -236,16 +236,19 @@ const MaintenanceAnalysis = () => {
     const newSchedule: ScheduleEntry[] = [];
     let currentSerialIndex = 0;
 
-    for (const period of periods) {
-      if (!period.startDate || !validateDate(period.startDate)) continue;
+    // If not using periods, use single period logic
+    if (!usePeriods || periods.length === 1) {
+      const period = periods[0];
+      if (!period.startDate || !validateDate(period.startDate)) {
+        toast.error("Data de início inválida");
+        return;
+      }
 
       const [day, month, year] = period.startDate.split('/').map(Number);
       let currentDate = new Date(year, month - 1, day);
       const teamsArray = Array.from({ length: period.teamCount }, (_, i) => `T${i + 1}`);
 
-      // Process serials for this period
       while (currentSerialIndex < sequencedSerials.length) {
-        // Assign serials to all teams for the current round
         for (let teamIdx = 0; teamIdx < teamsArray.length; teamIdx++) {
           if (currentSerialIndex >= sequencedSerials.length) break;
 
@@ -267,12 +270,68 @@ const MaintenanceAnalysis = () => {
           currentSerialIndex++;
         }
 
-        // Move to next working day after this round
         if (currentSerialIndex < sequencedSerials.length) {
           currentDate = addDays(calculateWorkingDays(currentDate, period.duration), 1);
           currentDate = getNextWorkingDay(addDays(currentDate, -1));
-        } else {
-          break;
+        }
+      }
+    } else {
+      // Multiple periods logic
+      for (let periodIdx = 0; periodIdx < periods.length && currentSerialIndex < sequencedSerials.length; periodIdx++) {
+        const period = periods[periodIdx];
+        if (!period.startDate || !validateDate(period.startDate)) continue;
+
+        const [day, month, year] = period.startDate.split('/').map(Number);
+        let currentDate = new Date(year, month - 1, day);
+        const teamsArray = Array.from({ length: period.teamCount }, (_, i) => `T${i + 1}`);
+
+        // Get next period start date to know when to stop
+        let nextPeriodStartDate: Date | null = null;
+        if (periodIdx < periods.length - 1) {
+          const nextPeriod = periods[periodIdx + 1];
+          if (nextPeriod.startDate && validateDate(nextPeriod.startDate)) {
+            const [nDay, nMonth, nYear] = nextPeriod.startDate.split('/').map(Number);
+            nextPeriodStartDate = new Date(nYear, nMonth - 1, nDay);
+          }
+        }
+
+        // Process serials for this period until we reach the next period's start date
+        while (currentSerialIndex < sequencedSerials.length) {
+          // Check if we've reached the next period's start date
+          if (nextPeriodStartDate && currentDate >= nextPeriodStartDate) {
+            break;
+          }
+
+          // Assign serials to all teams for the current round
+          for (let teamIdx = 0; teamIdx < teamsArray.length; teamIdx++) {
+            if (currentSerialIndex >= sequencedSerials.length) break;
+
+            const serial = sequencedSerials[currentSerialIndex];
+            const teamName = teamsArray[teamIdx];
+            
+            const entryStartDate = new Date(currentDate);
+            const entryEndDate = calculateWorkingDays(entryStartDate, period.duration);
+
+            newSchedule.push({
+              seq: serial.sequence,
+              functionalLocation: serial.functionalLocation,
+              serialNumber: serial.serialNumber,
+              team: teamName,
+              startDate: format(entryStartDate, 'dd/MM/yyyy'),
+              endDate: format(entryEndDate, 'dd/MM/yyyy'),
+            });
+
+            currentSerialIndex++;
+          }
+
+          // Move to next working day after this round
+          currentDate = addDays(calculateWorkingDays(currentDate, period.duration), 1);
+          currentDate = getNextWorkingDay(addDays(currentDate, -1));
+
+          // Check again after moving to next date
+          if (nextPeriodStartDate && currentDate >= nextPeriodStartDate) {
+            break;
+          }
         }
       }
     }
