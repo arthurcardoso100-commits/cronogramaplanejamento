@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Download, Copy, List } from "lucide-react";
+import { ArrowLeft, Download, Copy, List, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PARK_NAMES, getSerialsByPark, getHolidaysByPark, SerialData } from "@/data/parksData";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,13 +25,21 @@ interface ScheduleEntry {
   endDate: string;
 }
 
+interface ServicePeriod {
+  id: number;
+  serviceDescription: string;
+  teamCount: number;
+  duration: number;
+  startDate: string;
+}
+
 const MaintenanceAnalysis = () => {
   const navigate = useNavigate();
   const [parkName, setParkName] = useState("");
-  const [serviceDescription, setServiceDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [teamCount, setTeamCount] = useState<number>(1);
-  const [duration, setDuration] = useState<number>(1);
+  const [usePeriods, setUsePeriods] = useState(false);
+  const [periods, setPeriods] = useState<ServicePeriod[]>([
+    { id: 1, serviceDescription: "", teamCount: 1, duration: 1, startDate: "" }
+  ]);
   const [includeSaturdays, setIncludeSaturdays] = useState(false);
   const [includeSundays, setIncludeSundays] = useState(false);
   const [includeHolidays, setIncludeHolidays] = useState(false);
@@ -75,19 +83,99 @@ const MaintenanceAnalysis = () => {
     return date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === year;
   };
 
+  const addPeriod = () => {
+    if (periods.length >= 3) {
+      toast.error("Máximo de 3 períodos permitido");
+      return;
+    }
+
+    const lastPeriod = periods[periods.length - 1];
+    let suggestedStartDate = "";
+
+    if (lastPeriod.startDate && validateDate(lastPeriod.startDate)) {
+      const [day, month, year] = lastPeriod.startDate.split('/').map(Number);
+      const lastStartDate = new Date(year, month - 1, day);
+      const lastEndDate = calculateWorkingDays(lastStartDate, lastPeriod.duration);
+      const nextWorkingDay = getNextWorkingDay(lastEndDate);
+      suggestedStartDate = format(nextWorkingDay, 'dd/MM/yyyy');
+    }
+
+    setPeriods([...periods, { 
+      id: periods.length + 1, 
+      serviceDescription: "", 
+      teamCount: 1, 
+      duration: 1,
+      startDate: suggestedStartDate
+    }]);
+  };
+
+  const removePeriod = (id: number) => {
+    if (periods.length === 1) {
+      toast.error("Deve haver pelo menos um período");
+      return;
+    }
+    setPeriods(periods.filter(p => p.id !== id));
+  };
+
+  const updatePeriod = (id: number, field: keyof ServicePeriod, value: any) => {
+    setPeriods(periods.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+
+  const getNextWorkingDay = (date: Date): Date => {
+    let nextDay = addDays(date, 1);
+    
+    while (true) {
+      const isHoliday = holidays.some(h => 
+        h.getDate() === nextDay.getDate() &&
+        h.getMonth() === nextDay.getMonth() &&
+        h.getFullYear() === nextDay.getFullYear()
+      );
+      
+      const isSaturday = nextDay.getDay() === 6;
+      const isSunday = nextDay.getDay() === 0;
+      
+      const skipDay = 
+        (!includeSaturdays && isSaturday) ||
+        (!includeSundays && isSunday) ||
+        (!includeHolidays && isHoliday);
+      
+      if (!skipDay) {
+        return nextDay;
+      }
+      
+      nextDay = addDays(nextDay, 1);
+    }
+  };
+
   const handleGenerateSerials = () => {
     if (!parkName) {
       toast.error("Selecione um parque");
       return;
     }
-    if (!serviceDescription || !startDate || !teamCount || !duration) {
-      toast.error("Preencha todos os campos");
-      return;
+
+    if (usePeriods) {
+      for (const period of periods) {
+        if (!period.serviceDescription || !period.startDate || !period.teamCount || !period.duration) {
+          toast.error(`Preencha todos os campos do período ${period.id}`);
+          return;
+        }
+        if (!validateDate(period.startDate)) {
+          toast.error(`Data inválida no período ${period.id}. Use o formato dd/mm/yyyy`);
+          return;
+        }
+      }
+    } else {
+      const period = periods[0];
+      if (!period.serviceDescription || !period.startDate || !period.teamCount || !period.duration) {
+        toast.error("Preencha todos os campos");
+        return;
+      }
+      if (!validateDate(period.startDate)) {
+        toast.error("Data inválida. Use o formato dd/mm/yyyy (ex: 23/03/2026)");
+        return;
+      }
     }
-    if (!validateDate(startDate)) {
-      toast.error("Data inválida. Use o formato dd/mm/yyyy (ex: 23/03/2026)");
-      return;
-    }
+
     setShowSerials(true);
     toast.success("Tabela de seriais gerada");
   };
@@ -108,95 +196,120 @@ const MaintenanceAnalysis = () => {
     let daysAdded = 0;
 
     while (daysAdded < daysToAdd) {
-      currentDate = addDays(currentDate, 1);
-      
-      const dayOfWeek = currentDate.getDay();
-      const isSaturday = dayOfWeek === 6;
-      const isSunday = dayOfWeek === 0;
       const isHoliday = holidays.some(h => 
         h.getDate() === currentDate.getDate() &&
         h.getMonth() === currentDate.getMonth() &&
         h.getFullYear() === currentDate.getFullYear()
       );
-
-      const skipSaturday = isSaturday && !includeSaturdays;
-      const skipSunday = isSunday && !includeSundays;
-      const skipHoliday = isHoliday && !includeHolidays;
-
-      if (!skipSaturday && !skipSunday && !skipHoliday) {
+      
+      const isSaturday = currentDate.getDay() === 6;
+      const isSunday = currentDate.getDay() === 0;
+      
+      const skipDay = 
+        (!includeSaturdays && isSaturday) ||
+        (!includeSundays && isSunday) ||
+        (!includeHolidays && isHoliday);
+      
+      if (!skipDay) {
         daysAdded++;
+        if (daysAdded === daysToAdd) {
+          return currentDate;
+        }
       }
+      
+      currentDate = addDays(currentDate, 1);
     }
 
     return currentDate;
   };
 
   const handleGenerateSchedule = () => {
-    const hasAllSequences = serials.every(s => s.sequence > 0);
-    if (!hasAllSequences) {
-      toast.error("Preencha todas as sequências");
+    const sequencedSerials = serials
+      .filter(s => s.sequence > 0)
+      .sort((a, b) => a.sequence - b.sequence);
+
+    if (sequencedSerials.length === 0) {
+      toast.error("Preencha a sequência de pelo menos um serial");
       return;
     }
 
-    const sortedSerials = [...serials].sort((a, b) => a.sequence - b.sequence);
-    const scheduleData: ScheduleEntry[] = [];
-    const [day, month, year] = startDate.split('/');
-    const baseStartDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const newSchedule: ScheduleEntry[] = [];
+    let currentSerialIndex = 0;
 
-    let teamDates: { [key: number]: Date } = {};
-    for (let i = 1; i <= teamCount; i++) {
-      teamDates[i] = new Date(baseStartDate);
+    for (const period of periods) {
+      if (!period.startDate || !validateDate(period.startDate)) continue;
+
+      const [day, month, year] = period.startDate.split('/').map(Number);
+      let currentDate = new Date(year, month - 1, day);
+      const teamsArray = Array.from({ length: period.teamCount }, (_, i) => `T${i + 1}`);
+      let teamIndex = 0;
+
+      while (currentSerialIndex < sequencedSerials.length) {
+        const serial = sequencedSerials[currentSerialIndex];
+        const teamName = teamsArray[teamIndex % teamsArray.length];
+        
+        const entryStartDate = new Date(currentDate);
+        const entryEndDate = calculateWorkingDays(entryStartDate, period.duration);
+
+        newSchedule.push({
+          seq: serial.sequence,
+          functionalLocation: serial.functionalLocation,
+          serialNumber: serial.serialNumber,
+          team: teamName,
+          startDate: format(entryStartDate, 'dd/MM/yyyy'),
+          endDate: format(entryEndDate, 'dd/MM/yyyy'),
+        });
+
+        currentSerialIndex++;
+        teamIndex++;
+
+        if (teamIndex % teamsArray.length === 0) {
+          currentDate = addDays(entryEndDate, 1);
+          currentDate = getNextWorkingDay(currentDate);
+          currentDate = addDays(currentDate, -1);
+        }
+      }
     }
 
-    sortedSerials.forEach((serial) => {
-      const teamNumber = ((serial.sequence - 1) % teamCount) + 1;
-      const team = `Equipe ${teamNumber}`;
-      
-      const entryStartDate = new Date(teamDates[teamNumber]);
-      const entryEndDate = calculateWorkingDays(entryStartDate, duration - 1);
-      
-      scheduleData.push({
-        seq: serial.sequence,
-        functionalLocation: serial.functionalLocation,
-        serialNumber: serial.serialNumber,
-        team,
-        startDate: format(entryStartDate, 'dd/MM/yyyy'),
-        endDate: format(entryEndDate, 'dd/MM/yyyy')
-      });
-
-      teamDates[teamNumber] = addDays(entryEndDate, 1);
-    });
-
-    setSchedule(scheduleData);
-    toast.success("Cronograma gerado com sucesso");
+    setSchedule(newSchedule);
+    toast.success(`Cronograma gerado com ${newSchedule.length} entradas`);
   };
 
   const handleCopySchedule = () => {
-    const text = schedule.map(s => 
-      `${s.seq}\t${s.functionalLocation}\t${s.serialNumber}\t${s.team}\t${s.startDate}\t${s.endDate}`
+    if (schedule.length === 0) {
+      toast.error("Gere o cronograma primeiro");
+      return;
+    }
+
+    const header = "Seq\tFunctional Location\tSerial Number\tEquipe\tData Início\tData Fim\n";
+    const rows = schedule.map(entry => 
+      `${entry.seq}\t${entry.functionalLocation}\t${entry.serialNumber}\t${entry.team}\t${entry.startDate}\t${entry.endDate}`
     ).join('\n');
-    
-    navigator.clipboard.writeText(text);
-    toast.success("Dados copiados para a área de transferência");
+
+    navigator.clipboard.writeText(header + rows);
+    toast.success("Cronograma copiado para a área de transferência");
   };
 
   const handleExportToExcel = () => {
-    const headers = "Seq\tDescription of functional location\tSerial Number\tEquipe\tData de início\tData de finalização\n";
-    const rows = schedule.map(s => 
-      `${s.seq}\t${s.functionalLocation}\t${s.serialNumber}\t${s.team}\t${s.startDate}\t${s.endDate}`
+    if (schedule.length === 0) {
+      toast.error("Gere o cronograma primeiro");
+      return;
+    }
+
+    const header = "Seq\tFunctional Location\tSerial Number\tEquipe\tData Início\tData Fim\n";
+    const rows = schedule.map(entry => 
+      `${entry.seq}\t${entry.functionalLocation}\t${entry.serialNumber}\t${entry.team}\t${entry.startDate}\t${entry.endDate}`
     ).join('\n');
-    
-    const csvContent = headers + rows;
-    const blob = new Blob([csvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
-    const link = document.createElement("a");
+
+    const blob = new Blob([header + rows], { type: 'text/tab-separated-values' });
     const url = URL.createObjectURL(blob);
-    
-    link.setAttribute("href", url);
-    link.setAttribute("download", `cronograma_${parkName}_${format(new Date(), 'ddMMyyyy')}.tsv`);
-    link.style.visibility = 'hidden';
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cronograma_${parkName}_${format(new Date(), 'dd-MM-yyyy')}.tsv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     
     toast.success("Arquivo exportado com sucesso");
   };
@@ -230,7 +343,7 @@ const MaintenanceAnalysis = () => {
                     <SelectTrigger id="park">
                       <SelectValue placeholder="Selecione o parque" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background">
                       {PARK_NAMES.map((park) => (
                         <SelectItem key={park} value={park}>
                           {park}
@@ -241,87 +354,134 @@ const MaintenanceAnalysis = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="service">Descrição do Service *</Label>
-                  <Input
-                    id="service"
-                    value={serviceDescription}
-                    onChange={(e) => setServiceDescription(e.target.value)}
-                    placeholder="Ex: Manutenção Preventiva Anual"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Data de Início (dd/mm/yyyy) *</Label>
-                  <Input
-                    id="startDate"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    placeholder="23/03/2026"
-                    maxLength={10}
-                  />
-                  {startDate && !validateDate(startDate) && (
-                    <p className="text-sm text-destructive">
-                      Formato inválido. Use dd/mm/yyyy
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="teams">Quantidade de Equipes *</Label>
-                  <Input
-                    id="teams"
-                    type="number"
-                    min="1"
-                    value={teamCount}
-                    onChange={(e) => setTeamCount(parseInt(e.target.value) || 1)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duração em Dias do Service *</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    min="1"
-                    value={duration}
-                    onChange={(e) => setDuration(parseInt(e.target.value) || 1)}
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <Label>Dias de Trabalho</Label>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="saturdays"
-                        checked={includeSaturdays}
-                        onCheckedChange={setIncludeSaturdays}
-                      />
-                      <Label htmlFor="saturdays">Trabalhar aos sábados</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="sundays"
-                        checked={includeSundays}
-                        onCheckedChange={setIncludeSundays}
-                      />
-                      <Label htmlFor="sundays">Trabalhar aos domingos</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="holidays"
-                        checked={includeHolidays}
-                        onCheckedChange={setIncludeHolidays}
-                      />
-                      <Label htmlFor="holidays">Trabalhar em feriados</Label>
-                    </div>
+                  <Label>Dividir em Períodos?</Label>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="usePeriods"
+                      checked={usePeriods}
+                      onCheckedChange={setUsePeriods}
+                    />
+                    <Label htmlFor="usePeriods" className="cursor-pointer">
+                      {usePeriods ? "Sim, dividir em múltiplos períodos" : "Não, usar período único"}
+                    </Label>
                   </div>
                 </div>
               </div>
 
-              <Button onClick={handleGenerateSerials} className="w-full md:w-auto">
-                <List className="w-4 h-4 mr-2" />
-                Gerar Tabela de Seriais
+              <div className="space-y-3">
+                <Label>Dias de Trabalho</Label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="includeSaturdays"
+                      checked={includeSaturdays}
+                      onCheckedChange={setIncludeSaturdays}
+                    />
+                    <Label htmlFor="includeSaturdays" className="cursor-pointer">
+                      Trabalhar aos sábados
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="includeSundays"
+                      checked={includeSundays}
+                      onCheckedChange={setIncludeSundays}
+                    />
+                    <Label htmlFor="includeSundays" className="cursor-pointer">
+                      Trabalhar aos domingos
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="includeHolidays"
+                      checked={includeHolidays}
+                      onCheckedChange={setIncludeHolidays}
+                    />
+                    <Label htmlFor="includeHolidays" className="cursor-pointer">
+                      Trabalhar em feriados
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
+              {periods.map((period) => (
+                <Card key={period.id} className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold">
+                      {usePeriods ? `Período ${period.id}` : "Dados do Service"}
+                    </h3>
+                    {usePeriods && periods.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removePeriod(period.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor={`service-${period.id}`}>Descrição do Service *</Label>
+                      <Input
+                        id={`service-${period.id}`}
+                        value={period.serviceDescription}
+                        onChange={(e) => updatePeriod(period.id, 'serviceDescription', e.target.value)}
+                        placeholder="Ex: Manutenção Preventiva Anual"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor={`startDate-${period.id}`}>Data de Início (dd/mm/yyyy) *</Label>
+                      <Input
+                        id={`startDate-${period.id}`}
+                        value={period.startDate}
+                        onChange={(e) => updatePeriod(period.id, 'startDate', e.target.value)}
+                        placeholder="23/03/2026"
+                        maxLength={10}
+                      />
+                      {period.startDate && !validateDate(period.startDate) && (
+                        <p className="text-sm text-destructive">
+                          Formato inválido. Use dd/mm/yyyy
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor={`teams-${period.id}`}>Quantidade de Equipes *</Label>
+                      <Input
+                        id={`teams-${period.id}`}
+                        type="number"
+                        min="1"
+                        value={period.teamCount}
+                        onChange={(e) => updatePeriod(period.id, 'teamCount', parseInt(e.target.value) || 1)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor={`duration-${period.id}`}>Duração em Dias do Service *</Label>
+                      <Input
+                        id={`duration-${period.id}`}
+                        type="number"
+                        min="1"
+                        value={period.duration}
+                        onChange={(e) => updatePeriod(period.id, 'duration', parseInt(e.target.value) || 1)}
+                      />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+
+              {usePeriods && periods.length < 3 && (
+                <Button onClick={addPeriod} variant="outline" className="w-full">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Período ({periods.length}/3)
+                </Button>
+              )}
+
+              <Button onClick={handleGenerateSerials} className="w-full" size="lg">
+                <List className="w-5 h-5 mr-2" />
+                Gerar Tabela de Sequenciamento
               </Button>
             </CardContent>
           </Card>
@@ -331,49 +491,52 @@ const MaintenanceAnalysis = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Sequenciamento dos Seriais</CardTitle>
+                    <CardTitle>Sequenciamento de Seriais</CardTitle>
                     <CardDescription>
-                      Defina a ordem de execução de cada serial
+                      Defina a ordem de execução dos seriais (0 = não executar)
                     </CardDescription>
                   </div>
-                  <Button onClick={handleAutoSequence} variant="outline">
-                    Preencher Automaticamente
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button onClick={handleAutoSequence} variant="outline">
+                      Preencher Automaticamente
+                    </Button>
+                    <Button onClick={handleGenerateSchedule} variant="default">
+                      Gerar Cronograma
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border max-h-96 overflow-auto">
+                <div className="border rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Sequence</TableHead>
+                        <TableHead className="w-24">Sequência</TableHead>
                         <TableHead>Serial Number</TableHead>
-                        <TableHead>Description of Functional Location</TableHead>
+                        <TableHead>Functional Location</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {serials.map((serial, idx) => (
-                        <TableRow key={idx}>
+                      {serials.map((serial, index) => (
+                        <TableRow key={index}>
                           <TableCell>
                             <Input
                               type="number"
-                              min="1"
-                              value={serial.sequence || ""}
-                              onChange={(e) => handleSequenceChange(idx, e.target.value)}
+                              min="0"
+                              value={serial.sequence}
+                              onChange={(e) => handleSequenceChange(index, e.target.value)}
                               className="w-20"
                             />
                           </TableCell>
-                          <TableCell>{serial.serialNumber}</TableCell>
-                          <TableCell>{serial.functionalLocation}</TableCell>
+                          <TableCell className="font-mono">{serial.serialNumber}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {serial.functionalLocation}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </div>
-
-                <Button onClick={handleGenerateSchedule} className="mt-4 w-full md:w-auto">
-                  Gerar Cronograma
-                </Button>
               </CardContent>
             </Card>
           )}
@@ -385,7 +548,7 @@ const MaintenanceAnalysis = () => {
                   <div>
                     <CardTitle>Cronograma Gerado</CardTitle>
                     <CardDescription>
-                      Cronograma final com datas e equipes
+                      {schedule.length} entradas no cronograma
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -393,32 +556,32 @@ const MaintenanceAnalysis = () => {
                       <Copy className="w-4 h-4 mr-2" />
                       Copiar
                     </Button>
-                    <Button onClick={handleExportToExcel}>
+                    <Button onClick={handleExportToExcel} variant="default">
                       <Download className="w-4 h-4 mr-2" />
-                      Exportar Excel
+                      Exportar TSV
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border max-h-96 overflow-auto">
+                <div className="border rounded-lg overflow-auto max-h-96">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Seq</TableHead>
-                        <TableHead>Description of functional location</TableHead>
+                        <TableHead>Functional Location</TableHead>
                         <TableHead>Serial Number</TableHead>
                         <TableHead>Equipe</TableHead>
-                        <TableHead>Data de início</TableHead>
-                        <TableHead>Data de finalização</TableHead>
+                        <TableHead>Data Início</TableHead>
+                        <TableHead>Data Fim</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {schedule.map((entry, idx) => (
-                        <TableRow key={idx}>
+                      {schedule.map((entry, index) => (
+                        <TableRow key={index}>
                           <TableCell>{entry.seq}</TableCell>
-                          <TableCell>{entry.functionalLocation}</TableCell>
-                          <TableCell>{entry.serialNumber}</TableCell>
+                          <TableCell className="text-sm">{entry.functionalLocation}</TableCell>
+                          <TableCell className="font-mono">{entry.serialNumber}</TableCell>
                           <TableCell>{entry.team}</TableCell>
                           <TableCell>{entry.startDate}</TableCell>
                           <TableCell>{entry.endDate}</TableCell>
