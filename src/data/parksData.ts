@@ -1,4 +1,5 @@
 import parksDataJson from './parksData.json';
+import { readSerialsFromExcel } from '@/lib/excelReader';
 
 export interface SerialData {
   serialNumber: string;
@@ -70,22 +71,32 @@ export const PARK_NAMES = [
 // Load holidays from JSON
 export const HOLIDAYS: HolidayData = parksDataJson.holidays;
 
-// Load serials from JSON and transform to array format
-const serialsFromJson = parksDataJson.serials as Record<string, Array<{serialNumber: string, functionalLocation: string}>>;
+// Cache para os seriais carregados do Excel
+let serialsCache: { [parkName: string]: Array<{serialNumber: string, functionalLocation: string}> } | null = null;
 
-export const SERIALS_DATA: SerialData[] = Object.entries(serialsFromJson).flatMap(([parkName, serials]) =>
-  serials.map(s => ({
-    serialNumber: s.serialNumber,
-    parkName,
-    functionalLocation: s.functionalLocation
-  }))
-);
+// Função para carregar seriais do Excel (carrega uma vez e cacheia)
+async function loadSerials() {
+  if (serialsCache) {
+    return serialsCache;
+  }
+  
+  const excelData = await readSerialsFromExcel();
+  serialsCache = excelData.serials;
+  return serialsCache;
+}
 
-export const getSerialsByPark = (parkName: string): SerialData[] => {
-  return SERIALS_DATA
-    .filter(s => s.parkName.toLowerCase() === parkName.toLowerCase())
+export async function getSerialsByPark(parkName: string): Promise<SerialData[]> {
+  const serials = await loadSerials();
+  const parkSerials = serials[parkName] || [];
+  
+  return parkSerials
+    .map(s => ({
+      serialNumber: s.serialNumber,
+      parkName,
+      functionalLocation: s.functionalLocation
+    }))
     .sort((a, b) => a.serialNumber.localeCompare(b.serialNumber));
-};
+}
 
 export const getHolidaysByPark = (parkName: string): Date[] => {
   const holidays = HOLIDAYS[parkName] || [];
