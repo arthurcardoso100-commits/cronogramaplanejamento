@@ -46,9 +46,9 @@ const MaintenanceAnalysis = () => {
     }
   }, [navigate]);
 
-  const handleParkSelect = (value: string) => {
+  const handleParkSelect = async (value: string) => {
     setParkName(value);
-    const parkSerials = getSerialsByPark(value);
+    const parkSerials = await getSerialsByPark(value);
     const parkHolidays = getHolidaysByPark(value);
     
     setSerials(parkSerials.map((s, idx) => ({ ...s, sequence: 0 })));
