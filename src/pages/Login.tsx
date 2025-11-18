@@ -17,7 +17,7 @@ const Login = () => {
     if (password === "Vestasplanejamento") {
       sessionStorage.setItem("authenticated", "true");
       toast.success("Acesso autorizado");
-      navigate("/schedule");
+      navigate("/dashboard");
     } else {
       toast.error("Senha incorreta");
     }
