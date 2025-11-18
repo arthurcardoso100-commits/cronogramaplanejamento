@@ -356,13 +356,97 @@ const MaintenanceAnalysis = () => {
     toast.success("Cronograma copiado para a área de transferência");
   };
 
+  const getHolidayDescription = (dateStr: string): string => {
+    const holidayMap: { [key: string]: string } = {
+      '01/01': 'Confraternização Universal',
+      '02/01': 'Feriado Municipal',
+      '16/02': 'Carnaval',
+      '17/02': 'Carnaval',
+      '20/03': 'Feriado Municipal',
+      '25/03': 'Feriado Municipal',
+      '27/03': 'Feriado Municipal',
+      '06/03': 'Feriado Municipal',
+      '02/04': 'Feriado Municipal',
+      '03/04': 'Paixão de Cristo',
+      '05/04': 'Feriado Municipal',
+      '20/04': 'Páscoa',
+      '21/04': 'Tiradentes',
+      '27/04': 'Feriado Municipal',
+      '01/05': 'Dia do Trabalhador',
+      '03/05': 'Feriado Municipal',
+      '08/05': 'Feriado Municipal',
+      '15/05': 'Feriado Municipal',
+      '05/06': 'Feriado Municipal',
+      '08/06': 'Feriado Municipal',
+      '09/06': 'Feriado Municipal',
+      '13/06': 'Feriado Municipal',
+      '19/06': 'Feriado Municipal',
+      '24/06': 'São João',
+      '26/06': 'Feriado Municipal',
+      '27/06': 'Feriado Municipal',
+      '29/06': 'Feriado Municipal',
+      '02/07': 'Independência da Bahia',
+      '03/07': 'Feriado Municipal',
+      '06/07': 'Feriado Municipal',
+      '09/07': 'Feriado Municipal',
+      '11/07': 'Feriado Municipal',
+      '12/07': 'Feriado Municipal',
+      '17/07': 'Feriado Municipal',
+      '25/07': 'Feriado Municipal',
+      '26/07': 'Feriado Municipal',
+      '28/07': 'Feriado Municipal',
+      '31/07': 'Feriado Municipal',
+      '07/08': 'Feriado Municipal',
+      '08/08': 'Feriado Municipal',
+      '15/08': 'Feriado Municipal',
+      '21/08': 'Feriado Municipal',
+      '28/08': 'Feriado Municipal',
+      '05/09': 'Feriado Municipal',
+      '07/09': 'Independência do Brasil',
+      '08/09': 'Feriado Municipal',
+      '11/09': 'Feriado Municipal',
+      '17/09': 'Feriado Municipal',
+      '20/09': 'Feriado Municipal',
+      '25/09': 'Feriado Municipal',
+      '28/09': 'Feriado Municipal',
+      '03/10': 'Feriado Municipal',
+      '04/10': 'Feriado Municipal',
+      '12/10': 'Nossa Senhora Aparecida',
+      '16/10': 'Feriado Municipal',
+      '19/10': 'Feriado Municipal',
+      '23/10': 'Feriado Municipal',
+      '30/10': 'Feriado Municipal',
+      '31/10': 'Feriado Municipal',
+      '02/11': 'Finados',
+      '08/11': 'Feriado Municipal',
+      '15/11': 'Proclamação da República',
+      '19/11': 'Feriado Municipal',
+      '20/11': 'Consciência Negra',
+      '22/11': 'Feriado Municipal',
+      '25/11': 'Feriado Municipal',
+      '27/11': 'Feriado Municipal',
+      '28/11': 'Feriado Municipal',
+      '04/12': 'Feriado Municipal',
+      '07/12': 'Feriado Municipal',
+      '11/12': 'Feriado Municipal',
+      '20/12': 'Feriado Municipal',
+      '25/12': 'Natal',
+      '27/12': 'Feriado Municipal',
+      '30/12': 'Feriado Municipal',
+      '31/12': 'Feriado Municipal'
+    };
+
+    const dayMonth = dateStr.substring(0, 5);
+    return holidayMap[dayMonth] || 'Feriado';
+  };
+
   const handleExportToExcel = () => {
     if (schedule.length === 0) {
       toast.error("Gere o cronograma primeiro");
       return;
     }
 
-    // Prepare data for Excel
+    // Prepare data for Cronograma sheet
     const worksheetData = [
       ['Seq', 'Functional Location', 'Serial Number', 'Equipe', 'Data Início', 'Data Fim'],
       ...schedule.map(entry => [
@@ -375,10 +459,32 @@ const MaintenanceAnalysis = () => {
       ])
     ];
 
-    // Create workbook and worksheet
-    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    // Prepare data for Feriados sheet
+    const holidays = getHolidaysByPark(parkName);
+    const holidaysData = [
+      ['Parque', 'Data Feriado', 'Descrição Feriado'],
+      ...holidays.map(holiday => {
+        const dateStr = format(holiday, 'dd/MM/yyyy');
+        return [
+          parkName,
+          dateStr,
+          getHolidayDescription(dateStr)
+        ];
+      }).sort((a, b) => {
+        const [dayA, monthA] = a[1].split('/');
+        const [dayB, monthB] = b[1].split('/');
+        const dateA = new Date(2026, parseInt(monthA) - 1, parseInt(dayA));
+        const dateB = new Date(2026, parseInt(monthB) - 1, parseInt(dayB));
+        return dateA.getTime() - dateB.getTime();
+      })
+    ];
+
+    // Create workbook and worksheets
+    const cronogramaSheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    const feriadosSheet = XLSX.utils.aoa_to_sheet(holidaysData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Cronograma');
+    XLSX.utils.book_append_sheet(workbook, cronogramaSheet, 'Cronograma');
+    XLSX.utils.book_append_sheet(workbook, feriadosSheet, 'Feriados');
 
     // Generate Excel file and download
     XLSX.writeFile(workbook, `cronograma_${parkName}_${format(new Date(), 'dd-MM-yyyy')}.xlsx`);
