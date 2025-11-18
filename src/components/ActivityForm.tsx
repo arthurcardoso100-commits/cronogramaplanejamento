@@ -4,17 +4,39 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Activity } from "@/pages/Schedule";
-import { differenceInBusinessDays, differenceInDays, parse } from "date-fns";
+import { differenceInBusinessDays, differenceInDays, parse, isWeekend } from "date-fns";
 import { toast } from "sonner";
 
 interface ActivityFormProps {
   onSubmit: (activities: Activity[]) => void;
   onCancel: () => void;
+  parkName: string;
+  holidays: Date[];
 }
 
-export const ActivityForm = ({ onSubmit, onCancel }: ActivityFormProps) => {
+export const ActivityForm = ({ onSubmit, onCancel, parkName, holidays }: ActivityFormProps) => {
   const [pastedData, setPastedData] = useState("");
   const [includeWeekends, setIncludeWeekends] = useState(false);
+
+  const calculateBusinessDays = (start: Date, end: Date): number => {
+    let count = 0;
+    const current = new Date(start);
+    
+    while (current <= end) {
+      const isHoliday = holidays.some(h => 
+        h.getDate() === current.getDate() &&
+        h.getMonth() === current.getMonth() &&
+        h.getFullYear() === current.getFullYear()
+      );
+      
+      if (!isWeekend(current) && !isHoliday) {
+        count++;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return count;
+  };
 
   const parseExcelData = (data: string): Activity[] => {
     const lines = data.trim().split('\n');
@@ -64,7 +86,7 @@ export const ActivityForm = ({ onSubmit, onCancel }: ActivityFormProps) => {
 
         const duration = includeWeekends
           ? differenceInDays(endDate, startDate) + 1
-          : differenceInBusinessDays(endDate, startDate) + 1;
+          : calculateBusinessDays(startDate, endDate);
 
         activities.push({
           id: `${Date.now()}-${index}`,
@@ -88,6 +110,11 @@ export const ActivityForm = ({ onSubmit, onCancel }: ActivityFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!parkName) {
+      toast.error("Selecione um parque primeiro");
+      return;
+    }
     
     if (!pastedData.trim()) {
       toast.error("Cole os dados do Excel");

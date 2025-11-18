@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Wind, Download, Plus, Trash2, LogOut, ArrowLeft } from "lucide-react";
 import { ActivityForm } from "@/components/ActivityForm";
 import { ActivityList } from "@/components/ActivityList";
 import { generatePDF } from "@/lib/pdfGenerator";
 import { toast } from "sonner";
+import { PARK_NAMES, getHolidaysByPark } from "@/data/parksData";
 
 export interface Activity {
   id: string;
@@ -28,7 +30,8 @@ const Schedule = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [activityName, setActivityName] = useState("");
-  const [windfarmName, setWindfarmName] = useState("");
+  const [parkName, setParkName] = useState("");
+  const [holidays, setHolidays] = useState<Date[]>([]);
 
   useEffect(() => {
     if (sessionStorage.getItem("authenticated") !== "true") {
@@ -47,18 +50,24 @@ const Schedule = () => {
     toast.success("Atividade removida");
   };
 
+  const handleParkSelect = (value: string) => {
+    setParkName(value);
+    const parkHolidays = getHolidaysByPark(value);
+    setHolidays(parkHolidays);
+  };
+
   const handleGeneratePDF = () => {
     if (activities.length === 0) {
       toast.error("Adicione pelo menos uma atividade");
       return;
     }
     
-    if (!activityName || !windfarmName) {
-      toast.error("Informe o nome da atividade e do windfarm");
+    if (!activityName || !parkName) {
+      toast.error("Informe o nome da atividade e do parque");
       return;
     }
     
-    generatePDF(activities, activityName, windfarmName);
+    generatePDF(activities, activityName, parkName);
     toast.success("PDF gerado com sucesso");
   };
 
@@ -117,13 +126,19 @@ const Schedule = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="windfarmName">Nome do Windfarm *</Label>
-                  <Input
-                    id="windfarmName"
-                    value={windfarmName}
-                    onChange={(e) => setWindfarmName(e.target.value)}
-                    placeholder="Ex: Monte Verde"
-                  />
+                  <Label htmlFor="parkName">Nome do Parque *</Label>
+                  <Select value={parkName} onValueChange={handleParkSelect}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o parque" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background">
+                      {PARK_NAMES.map((park) => (
+                        <SelectItem key={park} value={park}>
+                          {park}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -146,6 +161,8 @@ const Schedule = () => {
                   <ActivityForm
                     onSubmit={handleAddActivities}
                     onCancel={() => setShowForm(false)}
+                    parkName={parkName}
+                    holidays={holidays}
                   />
                 ) : activities.length === 0 ? (
                   <div className="text-center py-12">
