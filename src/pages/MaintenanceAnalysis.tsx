@@ -55,6 +55,24 @@ const MaintenanceAnalysis = () => {
     setSchedule([]);
   };
 
+  const validateDate = (dateStr: string): boolean => {
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = dateStr.match(dateRegex);
+    
+    if (!match) return false;
+    
+    const day = parseInt(match[1]);
+    const month = parseInt(match[2]);
+    const year = parseInt(match[3]);
+    
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+    if (year < 2000 || year > 2100) return false;
+    
+    const date = new Date(year, month - 1, day);
+    return date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === year;
+  };
+
   const handleGenerateSerials = () => {
     if (!parkName) {
       toast.error("Selecione um parque");
@@ -62,6 +80,10 @@ const MaintenanceAnalysis = () => {
     }
     if (!serviceDescription || !startDate || !teamCount || !duration) {
       toast.error("Preencha todos os campos");
+      return;
+    }
+    if (!validateDate(startDate)) {
+      toast.error("Data inválida. Use o formato dd/mm/yyyy (ex: 23/03/2026)");
       return;
     }
     setShowSerials(true);
@@ -228,7 +250,13 @@ const MaintenanceAnalysis = () => {
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     placeholder="23/03/2026"
+                    maxLength={10}
                   />
+                  {startDate && !validateDate(startDate) && (
+                    <p className="text-sm text-destructive">
+                      Formato inválido. Use dd/mm/yyyy
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
