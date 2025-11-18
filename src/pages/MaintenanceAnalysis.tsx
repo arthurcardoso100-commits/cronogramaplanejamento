@@ -242,31 +242,37 @@ const MaintenanceAnalysis = () => {
       const [day, month, year] = period.startDate.split('/').map(Number);
       let currentDate = new Date(year, month - 1, day);
       const teamsArray = Array.from({ length: period.teamCount }, (_, i) => `T${i + 1}`);
-      let teamIndex = 0;
 
+      // Process serials for this period
       while (currentSerialIndex < sequencedSerials.length) {
-        const serial = sequencedSerials[currentSerialIndex];
-        const teamName = teamsArray[teamIndex % teamsArray.length];
-        
-        const entryStartDate = new Date(currentDate);
-        const entryEndDate = calculateWorkingDays(entryStartDate, period.duration);
+        // Assign serials to all teams for the current round
+        for (let teamIdx = 0; teamIdx < teamsArray.length; teamIdx++) {
+          if (currentSerialIndex >= sequencedSerials.length) break;
 
-        newSchedule.push({
-          seq: serial.sequence,
-          functionalLocation: serial.functionalLocation,
-          serialNumber: serial.serialNumber,
-          team: teamName,
-          startDate: format(entryStartDate, 'dd/MM/yyyy'),
-          endDate: format(entryEndDate, 'dd/MM/yyyy'),
-        });
+          const serial = sequencedSerials[currentSerialIndex];
+          const teamName = teamsArray[teamIdx];
+          
+          const entryStartDate = new Date(currentDate);
+          const entryEndDate = calculateWorkingDays(entryStartDate, period.duration);
 
-        currentSerialIndex++;
-        teamIndex++;
+          newSchedule.push({
+            seq: serial.sequence,
+            functionalLocation: serial.functionalLocation,
+            serialNumber: serial.serialNumber,
+            team: teamName,
+            startDate: format(entryStartDate, 'dd/MM/yyyy'),
+            endDate: format(entryEndDate, 'dd/MM/yyyy'),
+          });
 
-        if (teamIndex % teamsArray.length === 0) {
-          currentDate = addDays(entryEndDate, 1);
-          currentDate = getNextWorkingDay(currentDate);
-          currentDate = addDays(currentDate, -1);
+          currentSerialIndex++;
+        }
+
+        // Move to next working day after this round
+        if (currentSerialIndex < sequencedSerials.length) {
+          currentDate = addDays(calculateWorkingDays(currentDate, period.duration), 1);
+          currentDate = getNextWorkingDay(addDays(currentDate, -1));
+        } else {
+          break;
         }
       }
     }
