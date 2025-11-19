@@ -248,6 +248,49 @@ const MaintenanceAnalysis = () => {
     setSerials(newSerials);
   };
 
+  const handlePasteSequence = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const lines = text.trim().split('\n');
+      
+      // Parse the pasted data
+      const pastedData: { sequence: number; serial: string }[] = [];
+      
+      for (const line of lines) {
+        const parts = line.split('\t').map(s => s.trim());
+        if (parts.length >= 2) {
+          const sequence = parseInt(parts[0]);
+          const serial = parts[1];
+          if (!isNaN(sequence) && serial) {
+            pastedData.push({ sequence, serial });
+          }
+        }
+      }
+      
+      if (pastedData.length === 0) {
+        toast.error("Nenhum dado válido encontrado. Use o formato: Sequencia Serial (separados por tab)");
+        return;
+      }
+      
+      // Update serials with pasted sequences
+      const newSerials = [...serials];
+      let matchCount = 0;
+      
+      for (const pasted of pastedData) {
+        const index = newSerials.findIndex(s => s.serialNumber === pasted.serial);
+        if (index !== -1) {
+          newSerials[index].sequence = pasted.sequence;
+          matchCount++;
+        }
+      }
+      
+      setSerials(newSerials);
+      toast.success(`${matchCount} seriais sequenciados a partir dos dados colados`);
+    } catch (error) {
+      toast.error("Erro ao colar dados. Certifique-se de copiar os dados do Excel.");
+    }
+  };
+
   const isWorkingDay = (date: Date): boolean => {
     const isHoliday = editableHolidays.some(h => 
       h.date.getDate() === date.getDate() &&
@@ -577,7 +620,7 @@ const MaintenanceAnalysis = () => {
       : "Manutenção";
 
     // Convert schedule to activities format for PDF
-    const activities: Activity[] = schedule.map((entry, index) => {
+    const activities: Activity[] = schedule.map((entry) => {
       // Parse dates from string format (dd/MM/yyyy)
       const parseDate = (dateStr: string) => {
         const [day, month, year] = dateStr.split('/').map(Number);
@@ -588,7 +631,7 @@ const MaintenanceAnalysis = () => {
       const endDate = parseDate(entry.endDate);
 
       return {
-        id: `activity-${index}`,
+        id: entry.seq.toString(),
         serialNumber: entry.serialNumber,
         functionalDescription: entry.functionalLocation,
         activityDescription: usePeriods && periods[0]?.serviceDescription 
@@ -934,10 +977,13 @@ const MaintenanceAnalysis = () => {
                   <div>
                     <CardTitle>Sequenciamento de Seriais</CardTitle>
                     <CardDescription>
-                      Defina a ordem de execução dos seriais (0 = não executar)
+                      Defina a ordem de execução dos seriais (0 = não executar). Você pode colar dados do Excel (Ctrl+V).
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
+                    <Button onClick={handlePasteSequence} variant="outline">
+                      Colar do Excel
+                    </Button>
                     <Button onClick={handleAutoSequence} variant="outline">
                       Preencher Automaticamente
                     </Button>
