@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Download, Copy, List, Plus, Trash2, Calendar } from "lucide-react";
+import { ArrowLeft, Download, Copy, List, Plus, Trash2, Calendar, FileText, Eraser } from "lucide-react";
 import { toast } from "sonner";
 import { PARK_NAMES, getSerialsByPark, getHolidaysByPark, SerialData } from "@/data/parksData";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format, addDays } from "date-fns";
+import { format, addDays, parse } from "date-fns";
 import * as XLSX from 'xlsx';
+import { generatePDF } from "@/lib/pdfGenerator";
+import { Activity } from "@/pages/Schedule";
 
 interface EditableHoliday {
   date: Date;
@@ -61,7 +63,51 @@ const MaintenanceAnalysis = () => {
     if (sessionStorage.getItem("authenticated") !== "true") {
       navigate("/");
     }
+    
+    // Load persisted state
+    const savedState = localStorage.getItem("maintenanceAnalysisState");
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        if (state.parkName) setParkName(state.parkName);
+        if (state.usePeriods !== undefined) setUsePeriods(state.usePeriods);
+        if (state.periods) setPeriods(state.periods);
+        if (state.includeSaturdays !== undefined) setIncludeSaturdays(state.includeSaturdays);
+        if (state.includeSundays !== undefined) setIncludeSundays(state.includeSundays);
+        if (state.includeHolidays !== undefined) setIncludeHolidays(state.includeHolidays);
+        if (state.serials) setSerials(state.serials);
+        if (state.editableHolidays) {
+          // Convert date strings back to Date objects
+          const holidays = state.editableHolidays.map((h: any) => ({
+            ...h,
+            date: new Date(h.date)
+          }));
+          setEditableHolidays(holidays);
+        }
+        if (state.showSerials !== undefined) setShowSerials(state.showSerials);
+        if (state.schedule) setSchedule(state.schedule);
+      } catch (error) {
+        console.error("Error loading saved state:", error);
+      }
+    }
   }, [navigate]);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    const state = {
+      parkName,
+      usePeriods,
+      periods,
+      includeSaturdays,
+      includeSundays,
+      includeHolidays,
+      serials,
+      editableHolidays,
+      showSerials,
+      schedule
+    };
+    localStorage.setItem("maintenanceAnalysisState", JSON.stringify(state));
+  }, [parkName, usePeriods, periods, includeSaturdays, includeSundays, includeHolidays, serials, editableHolidays, showSerials, schedule]);
 
   const handleParkSelect = async (value: string) => {
     setParkName(value);
@@ -496,6 +542,71 @@ const MaintenanceAnalysis = () => {
     toast.success("Feriado removido");
   };
 
+  const handleClearData = () => {
+    setParkName("");
+    setUsePeriods(false);
+    setPeriods([{ id: 1, serviceDescription: "", teamCount: 1, duration: 1, startDate: "" }]);
+    setIncludeSaturdays(false);
+    setIncludeSundays(false);
+    setIncludeHolidays(false);
+    setSerials([]);
+    setHolidays([]);
+    setEditableHolidays([]);
+    setNewHolidayDate("");
+    setNewHolidayDescription("");
+    setShowSerials(false);
+    setSchedule([]);
+    localStorage.removeItem("maintenanceAnalysisState");
+    toast.success("Dados limpos com sucesso");
+  };
+
+  const handleGeneratePDF = () => {
+    if (schedule.length === 0) {
+      toast.error("Gere o cronograma primeiro");
+      return;
+    }
+
+    if (!parkName) {
+      toast.error("Selecione um parque");
+      return;
+    }
+
+    // Get service description from periods or use a default
+    const activityName = usePeriods && periods[0]?.serviceDescription 
+      ? periods[0].serviceDescription 
+      : "Manutenção";
+
+    // Convert schedule to activities format for PDF
+    const activities: Activity[] = schedule.map((entry, index) => {
+      // Parse dates from string format (dd/MM/yyyy)
+      const parseDate = (dateStr: string) => {
+        const [day, month, year] = dateStr.split('/').map(Number);
+        return new Date(year, month - 1, day);
+      };
+
+      const startDate = parseDate(entry.startDate);
+      const endDate = parseDate(entry.endDate);
+
+      return {
+        id: `activity-${index}`,
+        serialNumber: entry.serialNumber,
+        functionalDescription: entry.functionalLocation,
+        activityDescription: usePeriods && periods[0]?.serviceDescription 
+          ? periods[0].serviceDescription 
+          : "Manutenção",
+        startDate,
+        endDate,
+        includeWeekends: includeSaturdays || includeSundays,
+        duration: 1,
+        predecessor: "",
+        team: entry.team
+      };
+    });
+
+    generatePDF(activities, activityName, parkName);
+    toast.success("PDF gerado com sucesso");
+  };
+
   const handleExportToExcel = () => {
     if (schedule.length === 0) {
       toast.error("Gere o cronograma primeiro");
@@ -586,6 +697,23 @@ const MaintenanceAnalysis = () => {
                   </Select>
                 </div>
 
+                <div className="space-y-2">
+                  <Label>Ações</Label>
+                  <div className="flex items-start">
+                    <Button 
+                      onClick={handleClearData} 
+                      variant="outline" 
+                      size="default"
+                      disabled={!parkName}
+                    >
+                      <Eraser className="w-4 h-4 mr-2" />
+                      Limpar Dados
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Dividir em Períodos?</Label>
                   <div className="flex items-center space-x-2">
@@ -868,6 +996,10 @@ const MaintenanceAnalysis = () => {
                     <Button onClick={handleCopySchedule} variant="outline">
                       <Copy className="w-4 h-4 mr-2" />
                       Copiar
+                    </Button>
+                    <Button onClick={handleGeneratePDF} variant="outline">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Gerar PDF
                     </Button>
                     <Button onClick={handleExportToExcel} variant="default">
                       <Download className="w-4 h-4 mr-2" />
