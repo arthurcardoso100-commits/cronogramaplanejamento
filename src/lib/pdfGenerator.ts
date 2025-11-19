@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import { Activity } from "@/pages/Schedule";
 import { format, differenceInDays, min, max, getWeek } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import vestasLogo from "@/assets/vestas-logo.png";
 
 const drawHeader = (pdf: jsPDF, pageWidth: number, margin: number, activityName: string, windfarmName: string, pageNum: number) => {
@@ -174,8 +174,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       start: 28,
       end: 28,
       duration: 22,
-      predecessor: 25,
-      gantt: contentWidth - 238,
+      gantt: contentWidth - 213,
     } : {
       seq: 15,
       functional: 70,
@@ -183,8 +182,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       start: 28,
       end: 28,
       duration: 22,
-      predecessor: 25,
-      gantt: contentWidth - 218,
+      gantt: contentWidth - 193,
     };
 
     // Header background with modern gradient effect
@@ -214,10 +212,8 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     xPos += colWidths.start;
     pdf.text("End", xPos, yPos + 8);
     xPos += colWidths.end;
-    pdf.text("Duration", xPos, yPos + 8);
+    pdf.text("Duration (days)", xPos, yPos + 8);
     xPos += colWidths.duration;
-    pdf.text("Pred.", xPos, yPos + 8);
-    xPos += colWidths.predecessor;
     
     // Draw calendar header for Gantt column
     const ganttX = xPos;
@@ -281,23 +277,19 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
         xPos += colWidths.team;
       }
       
-      // Start Date
-      pdf.text(format(activity.startDate, "dd/MM/yyyy"), xPos, textY);
+      // Start Date with day abbreviation
+      const startDayAbbr = format(activity.startDate, "EEE", { locale: enUS });
+      pdf.text(`${startDayAbbr} ${format(activity.startDate, "dd/MM/yyyy")}`, xPos, textY);
       xPos += colWidths.start;
       
-      // End Date
-      pdf.text(format(activity.endDate, "dd/MM/yyyy"), xPos, textY);
+      // End Date with day abbreviation
+      const endDayAbbr = format(activity.endDate, "EEE", { locale: enUS });
+      pdf.text(`${endDayAbbr} ${format(activity.endDate, "dd/MM/yyyy")}`, xPos, textY);
       xPos += colWidths.end;
       
       // Duration
       pdf.text(`${activity.duration}d`, xPos, textY);
       xPos += colWidths.duration;
-
-      // Predecessor
-      pdf.text(activity.predecessor || "-", xPos, textY, {
-        maxWidth: colWidths.predecessor - 4,
-      });
-      xPos += colWidths.predecessor;
 
       // Gantt bar
       const ganttBarX = xPos;
