@@ -141,27 +141,21 @@ const MaintenanceAnalysis = () => {
   const getNextWorkingDay = (date: Date): Date => {
     let nextDay = addDays(date, 1);
     
-    while (true) {
-      const isHoliday = editableHolidays.some(h => 
-        h.date.getDate() === nextDay.getDate() &&
-        h.date.getMonth() === nextDay.getMonth() &&
-        h.date.getFullYear() === nextDay.getFullYear()
-      );
-      
-      const isSaturday = nextDay.getDay() === 6;
-      const isSunday = nextDay.getDay() === 0;
-      
-      const skipDay = 
-        (!includeSaturdays && isSaturday) ||
-        (!includeSundays && isSunday) ||
-        (!includeHolidays && isHoliday);
-      
-      if (!skipDay) {
-        return nextDay;
-      }
-      
+    while (!isWorkingDay(nextDay)) {
       nextDay = addDays(nextDay, 1);
     }
+    
+    return nextDay;
+  };
+
+  const findFirstWorkingDay = (date: Date): Date => {
+    let currentDay = new Date(date);
+    
+    while (!isWorkingDay(currentDay)) {
+      currentDay = addDays(currentDay, 1);
+    }
+    
+    return currentDay;
   };
 
   const handleGenerateSerials = () => {
@@ -208,26 +202,30 @@ const MaintenanceAnalysis = () => {
     setSerials(newSerials);
   };
 
+  const isWorkingDay = (date: Date): boolean => {
+    const isHoliday = editableHolidays.some(h => 
+      h.date.getDate() === date.getDate() &&
+      h.date.getMonth() === date.getMonth() &&
+      h.date.getFullYear() === date.getFullYear()
+    );
+    
+    const isSaturday = date.getDay() === 6;
+    const isSunday = date.getDay() === 0;
+    
+    const skipDay = 
+      (!includeSaturdays && isSaturday) ||
+      (!includeSundays && isSunday) ||
+      (!includeHolidays && isHoliday);
+    
+    return !skipDay;
+  };
+
   const calculateWorkingDays = (start: Date, daysToAdd: number): Date => {
     let currentDate = new Date(start);
     let daysAdded = 0;
 
     while (daysAdded < daysToAdd) {
-      const isHoliday = editableHolidays.some(h => 
-        h.date.getDate() === currentDate.getDate() &&
-        h.date.getMonth() === currentDate.getMonth() &&
-        h.date.getFullYear() === currentDate.getFullYear()
-      );
-      
-      const isSaturday = currentDate.getDay() === 6;
-      const isSunday = currentDate.getDay() === 0;
-      
-      const skipDay = 
-        (!includeSaturdays && isSaturday) ||
-        (!includeSundays && isSunday) ||
-        (!includeHolidays && isHoliday);
-      
-      if (!skipDay) {
+      if (isWorkingDay(currentDate)) {
         daysAdded++;
         if (daysAdded === daysToAdd) {
           return currentDate;
@@ -272,7 +270,8 @@ const MaintenanceAnalysis = () => {
           const serial = sequencedSerials[currentSerialIndex];
           const teamName = teamsArray[teamIdx];
           
-          const entryStartDate = new Date(currentDate);
+          const rawStartDate = new Date(currentDate);
+          const entryStartDate = findFirstWorkingDay(rawStartDate);
           const entryEndDate = calculateWorkingDays(entryStartDate, period.duration);
 
           newSchedule.push({
@@ -326,7 +325,8 @@ const MaintenanceAnalysis = () => {
             const serial = sequencedSerials[currentSerialIndex];
             const teamName = teamsArray[teamIdx];
             
-            const entryStartDate = new Date(currentDate);
+            const rawStartDate = new Date(currentDate);
+            const entryStartDate = findFirstWorkingDay(rawStartDate);
             const entryEndDate = calculateWorkingDays(entryStartDate, period.duration);
 
             newSchedule.push({
