@@ -6,12 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Download, Copy, List, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Copy, List, Plus, Trash2, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { PARK_NAMES, getSerialsByPark, getHolidaysByPark, SerialData } from "@/data/parksData";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, addDays } from "date-fns";
 import * as XLSX from 'xlsx';
+
+interface EditableHoliday {
+  date: Date;
+  description: string;
+}
 
 interface SequencedSerial extends SerialData {
   sequence: number;
@@ -46,6 +51,9 @@ const MaintenanceAnalysis = () => {
   const [includeHolidays, setIncludeHolidays] = useState(false);
   const [serials, setSerials] = useState<SequencedSerial[]>([]);
   const [holidays, setHolidays] = useState<Date[]>([]);
+  const [editableHolidays, setEditableHolidays] = useState<EditableHoliday[]>([]);
+  const [newHolidayDate, setNewHolidayDate] = useState("");
+  const [newHolidayDescription, setNewHolidayDescription] = useState("");
   const [showSerials, setShowSerials] = useState(false);
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
 
@@ -62,6 +70,14 @@ const MaintenanceAnalysis = () => {
     
     setSerials(parkSerials.map((s, idx) => ({ ...s, sequence: 0 })));
     setHolidays(parkHolidays);
+    
+    // Initialize editable holidays with descriptions
+    const holidaysWithDescriptions = parkHolidays.map(date => ({
+      date,
+      description: getHolidayDescription(format(date, 'dd/MM/yyyy'))
+    }));
+    setEditableHolidays(holidaysWithDescriptions);
+    
     setShowSerials(false);
     setSchedule([]);
   };
@@ -126,10 +142,10 @@ const MaintenanceAnalysis = () => {
     let nextDay = addDays(date, 1);
     
     while (true) {
-      const isHoliday = holidays.some(h => 
-        h.getDate() === nextDay.getDate() &&
-        h.getMonth() === nextDay.getMonth() &&
-        h.getFullYear() === nextDay.getFullYear()
+      const isHoliday = editableHolidays.some(h => 
+        h.date.getDate() === nextDay.getDate() &&
+        h.date.getMonth() === nextDay.getMonth() &&
+        h.date.getFullYear() === nextDay.getFullYear()
       );
       
       const isSaturday = nextDay.getDay() === 6;
@@ -197,10 +213,10 @@ const MaintenanceAnalysis = () => {
     let daysAdded = 0;
 
     while (daysAdded < daysToAdd) {
-      const isHoliday = holidays.some(h => 
-        h.getDate() === currentDate.getDate() &&
-        h.getMonth() === currentDate.getMonth() &&
-        h.getFullYear() === currentDate.getFullYear()
+      const isHoliday = editableHolidays.some(h => 
+        h.date.getDate() === currentDate.getDate() &&
+        h.date.getMonth() === currentDate.getMonth() &&
+        h.date.getFullYear() === currentDate.getFullYear()
       );
       
       const isSaturday = currentDate.getDay() === 6;
@@ -440,6 +456,46 @@ const MaintenanceAnalysis = () => {
     return holidayMap[dayMonth] || 'Feriado';
   };
 
+  const handleAddHoliday = () => {
+    if (!newHolidayDate) {
+      toast.error("Informe a data do feriado");
+      return;
+    }
+    if (!validateDate(newHolidayDate)) {
+      toast.error("Data inválida. Use o formato dd/mm/yyyy");
+      return;
+    }
+    if (!newHolidayDescription) {
+      toast.error("Informe a descrição do feriado");
+      return;
+    }
+
+    const [day, month, year] = newHolidayDate.split('/').map(Number);
+    const newDate = new Date(year, month - 1, day);
+
+    // Check if holiday already exists
+    const exists = editableHolidays.some(h =>
+      h.date.getDate() === newDate.getDate() &&
+      h.date.getMonth() === newDate.getMonth() &&
+      h.date.getFullYear() === newDate.getFullYear()
+    );
+
+    if (exists) {
+      toast.error("Este feriado já existe");
+      return;
+    }
+
+    setEditableHolidays([...editableHolidays, { date: newDate, description: newHolidayDescription }]);
+    setNewHolidayDate("");
+    setNewHolidayDescription("");
+    toast.success("Feriado adicionado");
+  };
+
+  const handleDeleteHoliday = (index: number) => {
+    setEditableHolidays(editableHolidays.filter((_, i) => i !== index));
+    toast.success("Feriado removido");
+  };
+
   const handleExportToExcel = () => {
     if (schedule.length === 0) {
       toast.error("Gere o cronograma primeiro");
@@ -459,16 +515,15 @@ const MaintenanceAnalysis = () => {
       ])
     ];
 
-    // Prepare data for Feriados sheet
-    const holidays = getHolidaysByPark(parkName);
+    // Prepare data for Feriados sheet using editable holidays
     const holidaysData = [
       ['Parque', 'Data Feriado', 'Descrição Feriado'],
-      ...holidays.map(holiday => {
-        const dateStr = format(holiday, 'dd/MM/yyyy');
+      ...editableHolidays.map(holiday => {
+        const dateStr = format(holiday.date, 'dd/MM/yyyy');
         return [
           parkName,
           dateStr,
-          getHolidayDescription(dateStr)
+          holiday.description
         ];
       }).sort((a, b) => {
         const [dayA, monthA] = a[1].split('/');
@@ -663,6 +718,86 @@ const MaintenanceAnalysis = () => {
               </Button>
             </CardContent>
           </Card>
+
+          {parkName && editableHolidays.length > 0 && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Gerenciar Feriados
+                </CardTitle>
+                <CardDescription>
+                  Visualize, edite ou adicione feriados. Feriados são considerados dias não úteis no cronograma.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="border rounded-lg overflow-auto max-h-64">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="w-16">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {editableHolidays
+                        .sort((a, b) => a.date.getTime() - b.date.getTime())
+                        .map((holiday, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{format(holiday.date, 'dd/MM/yyyy')}</TableCell>
+                            <TableCell>{holiday.description}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteHoliday(index)}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Adicionar Novo Feriado</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="newHolidayDate">Data (dd/mm/yyyy)</Label>
+                      <Input
+                        id="newHolidayDate"
+                        value={newHolidayDate}
+                        onChange={(e) => setNewHolidayDate(e.target.value)}
+                        placeholder="01/01/2026"
+                        maxLength={10}
+                      />
+                      {newHolidayDate && !validateDate(newHolidayDate) && (
+                        <p className="text-sm text-destructive">Formato inválido</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newHolidayDescription">Descrição</Label>
+                      <Input
+                        id="newHolidayDescription"
+                        value={newHolidayDescription}
+                        onChange={(e) => setNewHolidayDescription(e.target.value)}
+                        placeholder="Exemplo: Aniversário da Cidade"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button onClick={handleAddHoliday} className="w-full">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Adicionar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {showSerials && (
             <Card className="shadow-lg">
