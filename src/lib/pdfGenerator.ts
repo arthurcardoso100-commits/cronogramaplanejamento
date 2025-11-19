@@ -252,7 +252,7 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       
       // Seq - centered vertically
       const textY = yPos + rowHeight / 2 + 1;
-      pdf.text(activity.activityDescription, xPos, textY, {
+      pdf.text(activity.id, xPos, textY, {
         maxWidth: colWidths.seq - 4,
       });
       xPos += colWidths.seq;
