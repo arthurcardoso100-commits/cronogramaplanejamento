@@ -235,7 +235,8 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
     xPos += colWidths.start;
     pdf.text("End", xPos, yPos + 8);
     xPos += colWidths.end;
-    pdf.text("Duration (days)", xPos, yPos + 8);
+    pdf.text("Duration", xPos, yPos + 6);
+    pdf.text("(days)", xPos, yPos + 11);
     xPos += colWidths.duration;
     
     // Draw calendar header for Gantt column
