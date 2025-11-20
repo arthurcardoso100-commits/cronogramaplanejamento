@@ -40,36 +40,59 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
   pdf.setFont("helvetica", "bold");
   pdf.setTextColor(255, 255, 255);
   
+  // Build month segments based on actual week dates
+  const monthSegments: { month: number, year: number, startX: number, endX: number }[] = [];
   let currentMonth = -1;
-  let monthStartX = ganttX;
-  const monthBoundaries: number[] = [];
+  let currentYear = -1;
+  let segmentStartX = ganttX;
   
   for (let i = 0; i < totalWeeks; i++) {
     const weekDate = new Date(projectStart);
     weekDate.setDate(weekDate.getDate() + (i * 7));
     const weekX = ganttX + (i * weekWidth);
+    const weekMonth = weekDate.getMonth();
+    const weekYear = weekDate.getFullYear();
     
-    // Check if month changed
-    if (weekDate.getMonth() !== currentMonth) {
-      // Draw previous month label if exists
+    // Check if month or year changed
+    if (weekMonth !== currentMonth || weekYear !== currentYear) {
+      // Save previous segment if exists
       if (currentMonth !== -1) {
-        const monthWidth = weekX - monthStartX;
-        const prevMonth = new Date(weekDate);
-        prevMonth.setMonth(prevMonth.getMonth() - 1);
-        const monthLabel = format(prevMonth, "MMM/yyyy");
-        pdf.text(monthLabel, monthStartX + monthWidth / 2, yPos + 4, { align: "center" });
-        monthBoundaries.push(weekX);
+        monthSegments.push({
+          month: currentMonth,
+          year: currentYear,
+          startX: segmentStartX,
+          endX: weekX
+        });
       }
-      currentMonth = weekDate.getMonth();
-      monthStartX = weekX;
+      currentMonth = weekMonth;
+      currentYear = weekYear;
+      segmentStartX = weekX;
     }
   }
   
-  // Draw last month label
-  const lastWeekDate = new Date(projectStart);
-  lastWeekDate.setDate(lastWeekDate.getDate() + (totalWeeks * 7));
-  const monthLabel = format(lastWeekDate, "MMM/yyyy");
-  pdf.text(monthLabel, monthStartX + (ganttX + ganttWidth - monthStartX) / 2, yPos + 4, { align: "center" });
+  // Add last segment
+  monthSegments.push({
+    month: currentMonth,
+    year: currentYear,
+    startX: segmentStartX,
+    endX: ganttX + ganttWidth
+  });
+  
+  // Draw month labels
+  const monthBoundaries: number[] = [];
+  monthSegments.forEach((segment, index) => {
+    const segmentWidth = segment.endX - segment.startX;
+    const centerX = segment.startX + segmentWidth / 2;
+    
+    const monthDate = new Date(segment.year, segment.month, 1);
+    const monthLabel = format(monthDate, "MMM/yyyy");
+    pdf.text(monthLabel, centerX, yPos + 4, { align: "center" });
+    
+    // Add boundary except for the first segment
+    if (index > 0) {
+      monthBoundaries.push(segment.startX);
+    }
+  });
   
   // Draw separator line between months and weeks
   pdf.setDrawColor(255, 255, 255);
@@ -84,7 +107,7 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
     const weekDate = new Date(projectStart);
     weekDate.setDate(weekDate.getDate() + (i * 7));
     const weekX = ganttX + (i * weekWidth);
-    const weekNum = getWeek(weekDate); // Get actual week number of the year
+    const weekNum = getWeek(weekDate);
     
     // Draw vertical separator
     if (i > 0) {
