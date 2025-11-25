@@ -309,19 +309,15 @@ const MaintenanceAnalysis = () => {
     return !skipDay;
   };
 
-  const calculateWorkingDays = (start: Date, daysToAdd: number): Date => {
+  const calculateWorkingDays = (start: Date, duration: number): Date => {
     let currentDate = new Date(start);
-    let daysAdded = 0;
+    let daysAdded = 1; // Start counting from 1 since the start date is day 1
 
-    while (daysAdded < daysToAdd) {
+    while (daysAdded < duration) {
+      currentDate = addDays(currentDate, 1);
       if (isWorkingDay(currentDate)) {
         daysAdded++;
-        if (daysAdded === daysToAdd) {
-          return currentDate;
-        }
       }
-      
-      currentDate = addDays(currentDate, 1);
     }
 
     return currentDate;
