@@ -626,6 +626,17 @@ const MaintenanceAnalysis = () => {
       const startDate = parseDate(entry.startDate);
       const endDate = parseDate(entry.endDate);
 
+      // Calculate duration in working days
+      let durationDays = 1; // Count start date as day 1
+      let currentDate = new Date(startDate);
+      
+      while (currentDate < endDate) {
+        currentDate = addDays(currentDate, 1);
+        if (isWorkingDay(currentDate)) {
+          durationDays++;
+        }
+      }
+
       return {
         id: entry.seq.toString(),
         serialNumber: entry.serialNumber,
@@ -636,7 +647,7 @@ const MaintenanceAnalysis = () => {
         startDate,
         endDate,
         includeWeekends: includeSaturdays || includeSundays,
-        duration: 1,
+        duration: durationDays,
         predecessor: "",
         team: entry.team
       };
