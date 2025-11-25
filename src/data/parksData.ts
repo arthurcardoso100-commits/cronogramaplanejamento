@@ -71,6 +71,9 @@ export const PARK_NAMES = [
 // Load holidays from JSON
 export const HOLIDAYS: HolidayData = parksDataJson.holidays;
 
+// Load serials from JSON (priority source)
+const JSON_SERIALS: { [parkName: string]: Array<{serialNumber: string, functionalLocation: string}> } = (parksDataJson as any).serials || {};
+
 // Cache para os seriais carregados do Excel
 let serialsCache: { [parkName: string]: Array<{serialNumber: string, functionalLocation: string}> } | null = null;
 
@@ -86,6 +89,18 @@ async function loadSerials() {
 }
 
 export async function getSerialsByPark(parkName: string): Promise<SerialData[]> {
+  // First check if serials exist in JSON (priority)
+  if (JSON_SERIALS[parkName] && JSON_SERIALS[parkName].length > 0) {
+    return JSON_SERIALS[parkName]
+      .map(s => ({
+        serialNumber: s.serialNumber,
+        parkName,
+        functionalLocation: s.functionalLocation
+      }))
+      .sort((a, b) => a.serialNumber.localeCompare(b.serialNumber));
+  }
+  
+  // Fallback to Excel
   const serials = await loadSerials();
   const parkSerials = serials[parkName] || [];
   
