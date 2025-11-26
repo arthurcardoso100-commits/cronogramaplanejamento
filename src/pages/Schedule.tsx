@@ -71,6 +71,14 @@ const Schedule = () => {
     toast.success("PDF gerado com sucesso");
   };
 
+  const handleClearData = () => {
+    setActivities([]);
+    setActivityName("");
+    setParkName("");
+    setHolidays([]);
+    toast.success("Dados limpos com sucesso");
+  };
+
   const handleLogout = () => {
     sessionStorage.removeItem("authenticated");
     navigate("/");
@@ -108,10 +116,16 @@ const Schedule = () => {
                     Preencha as informações básicas e importe as atividades
                   </CardDescription>
                 </div>
-                <Button onClick={handleGeneratePDF} variant="default" className="gap-2">
-                  <Download className="w-4 h-4" />
-                  Gerar PDF
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={handleClearData} variant="outline" className="gap-2">
+                    <Trash2 className="w-4 h-4" />
+                    Limpar Dados
+                  </Button>
+                  <Button onClick={handleGeneratePDF} variant="default" className="gap-2">
+                    <Download className="w-4 h-4" />
+                    Gerar PDF
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
