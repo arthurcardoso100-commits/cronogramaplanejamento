@@ -274,9 +274,9 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       pdf.setFontSize(7);
       xPos = margin + 2;
       
-      // Seq - centered vertically
+      // Seq - centered vertically (use activityDescription which contains the user's sequence)
       const textY = yPos + rowHeight / 2 + 1;
-      pdf.text(activity.id, xPos, textY, {
+      pdf.text(activity.activityDescription, xPos, textY, {
         maxWidth: colWidths.seq - 4,
       });
       xPos += colWidths.seq;
