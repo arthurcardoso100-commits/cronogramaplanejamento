@@ -131,7 +131,7 @@ const drawCalendarHeader = (pdf: jsPDF, yPos: number, ganttX: number, ganttWidth
   return monthBoundaries;
 };
 
-export const generatePDF = (activities: Activity[], activityName: string, windfarmName: string) => {
+export const generatePDF = (activities: Activity[], activityName: string, windfarmName: string, useProvidedDuration: boolean = false) => {
   // A3 landscape dimensions in mm
   const pdf = new jsPDF({
     orientation: "landscape",
@@ -311,9 +311,11 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       pdf.text(`${endDayAbbr} ${format(activity.endDate, "dd/MM/yyyy")}`, xPos, textY);
       xPos += colWidths.end;
       
-      // Duration - calculated as End date - Start date + 1
-      const calculatedDuration = differenceInDays(activity.endDate, activity.startDate) + 1;
-      pdf.text(`${calculatedDuration}d`, xPos, textY);
+      // Duration - either use provided duration or calculate as End date - Start date + 1
+      const durationToDisplay = useProvidedDuration
+        ? activity.duration
+        : differenceInDays(activity.endDate, activity.startDate) + 1;
+      pdf.text(`${durationToDisplay}d`, xPos, textY);
       xPos += colWidths.duration;
 
       // Gantt bar
