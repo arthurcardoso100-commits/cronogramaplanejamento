@@ -633,9 +633,7 @@ const MaintenanceAnalysis = () => {
         id: entry.seq.toString(),
         serialNumber: entry.serialNumber,
         functionalDescription: entry.functionalLocation,
-        activityDescription: usePeriods && periods[0]?.serviceDescription 
-          ? periods[0].serviceDescription 
-          : "Manutenção",
+        activityDescription: entry.seq.toString(),
         startDate,
         endDate,
         includeWeekends: includeSaturdays || includeSundays,
@@ -645,7 +643,7 @@ const MaintenanceAnalysis = () => {
       };
     });
 
-    generatePDF(activities, activityName, parkName);
+    generatePDF(activities, activityName, parkName, true);
     toast.success("PDF gerado com sucesso");
   };
 
