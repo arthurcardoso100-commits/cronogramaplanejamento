@@ -31,6 +31,7 @@ interface ScheduleEntry {
   team: string;
   startDate: string;
   endDate: string;
+  duration: number;
 }
 
 interface ServicePeriod {
@@ -366,6 +367,7 @@ const MaintenanceAnalysis = () => {
             team: teamName,
             startDate: format(entryStartDate, 'dd/MM/yyyy'),
             endDate: format(entryEndDate, 'dd/MM/yyyy'),
+            duration: period.duration,
           });
 
           currentSerialIndex++;
@@ -421,6 +423,7 @@ const MaintenanceAnalysis = () => {
               team: teamName,
               startDate: format(entryStartDate, 'dd/MM/yyyy'),
               endDate: format(entryEndDate, 'dd/MM/yyyy'),
+              duration: period.duration,
             });
 
             currentSerialIndex++;
@@ -626,17 +629,6 @@ const MaintenanceAnalysis = () => {
       const startDate = parseDate(entry.startDate);
       const endDate = parseDate(entry.endDate);
 
-      // Calculate duration in working days
-      let durationDays = 1; // Count start date as day 1
-      let currentDate = new Date(startDate);
-      
-      while (currentDate < endDate) {
-        currentDate = addDays(currentDate, 1);
-        if (isWorkingDay(currentDate)) {
-          durationDays++;
-        }
-      }
-
       return {
         id: entry.seq.toString(),
         serialNumber: entry.serialNumber,
@@ -647,7 +639,7 @@ const MaintenanceAnalysis = () => {
         startDate,
         endDate,
         includeWeekends: includeSaturdays || includeSundays,
-        duration: durationDays,
+        duration: entry.duration,
         predecessor: "",
         team: entry.team
       };
@@ -665,14 +657,15 @@ const MaintenanceAnalysis = () => {
 
     // Prepare data for Cronograma sheet
     const worksheetData = [
-      ['Seq', 'Functional Location', 'Serial Number', 'Equipe', 'Data Início', 'Data Fim'],
+      ['Seq', 'Functional Location', 'Serial Number', 'Equipe', 'Data Início', 'Data Fim', 'Duration (Days)'],
       ...schedule.map(entry => [
         entry.seq,
         entry.functionalLocation,
         entry.serialNumber,
         entry.team,
         entry.startDate,
-        entry.endDate
+        entry.endDate,
+        `${entry.duration}d`
       ])
     ];
 
@@ -1072,6 +1065,7 @@ const MaintenanceAnalysis = () => {
                         <TableHead>Equipe</TableHead>
                         <TableHead>Data Início</TableHead>
                         <TableHead>Data Fim</TableHead>
+                        <TableHead>Duration (Days)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1083,6 +1077,7 @@ const MaintenanceAnalysis = () => {
                           <TableCell>{entry.team}</TableCell>
                           <TableCell>{entry.startDate}</TableCell>
                           <TableCell>{entry.endDate}</TableCell>
+                          <TableCell>{entry.duration}d</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
