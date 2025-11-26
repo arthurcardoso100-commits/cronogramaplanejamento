@@ -311,8 +311,9 @@ export const generatePDF = (activities: Activity[], activityName: string, windfa
       pdf.text(`${endDayAbbr} ${format(activity.endDate, "dd/MM/yyyy")}`, xPos, textY);
       xPos += colWidths.end;
       
-      // Duration
-      pdf.text(`${activity.duration}d`, xPos, textY);
+      // Duration - calculated as End date - Start date + 1
+      const calculatedDuration = differenceInDays(activity.endDate, activity.startDate) + 1;
+      pdf.text(`${calculatedDuration}d`, xPos, textY);
       xPos += colWidths.duration;
 
       // Gantt bar
