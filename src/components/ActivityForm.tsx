@@ -84,9 +84,7 @@ export const ActivityForm = ({ onSubmit, onCancel, parkName, holidays }: Activit
           throw new Error("Invalid date");
         }
 
-        const duration = includeWeekends
-          ? differenceInDays(endDate, startDate) + 1
-          : calculateBusinessDays(startDate, endDate);
+        const duration = differenceInDays(endDate, startDate) + 1;
 
         activities.push({
           id: `${Date.now()}-${index}`,
