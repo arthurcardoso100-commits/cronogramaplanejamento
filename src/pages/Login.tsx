@@ -14,7 +14,7 @@ const Login = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (password === "Vestasplanejamento") {
+    if (password === "Vestasplanejamento1") {
       sessionStorage.setItem("authenticated", "true");
       toast.success("Acesso autorizado");
       navigate("/dashboard");
