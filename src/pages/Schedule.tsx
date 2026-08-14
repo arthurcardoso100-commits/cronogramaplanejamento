@@ -143,7 +143,14 @@ const Schedule = () => {
                     Preencha as informações básicas e importe as atividades
                   </CardDescription>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  <CloudSchedules
+                    module="vestas"
+                    parkName={parkName}
+                    getState={getCloudState}
+                    applyState={applyCloudState}
+                  />
+
                   <Button onClick={handleClearData} variant="outline" className="gap-2">
                     <Trash2 className="w-4 h-4" />
                     Limpar Dados
