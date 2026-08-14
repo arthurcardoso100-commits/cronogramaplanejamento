@@ -71,6 +71,32 @@ const Schedule = () => {
     toast.success("PDF gerado com sucesso");
   };
 
+  const getCloudState = () => ({
+    activityName,
+    parkName,
+    activities: activities.map(a => ({
+      ...a,
+      startDate: a.startDate instanceof Date ? a.startDate.toISOString() : a.startDate,
+      endDate: a.endDate instanceof Date ? a.endDate.toISOString() : a.endDate,
+    })),
+  });
+
+  const applyCloudState = (state: any) => {
+    if (!state) return;
+    setActivityName(state.activityName || "");
+    const park = state.parkName || "";
+    setParkName(park);
+    setHolidays(park ? getHolidaysByPark(park) : []);
+    setActivities(
+      (state.activities || []).map((a: any) => ({
+        ...a,
+        startDate: new Date(a.startDate),
+        endDate: new Date(a.endDate),
+      }))
+    );
+    setShowForm(false);
+  };
+
   const handleClearData = () => {
     setActivities([]);
     setActivityName("");
@@ -78,6 +104,7 @@ const Schedule = () => {
     setHolidays([]);
     toast.success("Dados limpos com sucesso");
   };
+
 
   const handleLogout = () => {
     sessionStorage.removeItem("authenticated");
