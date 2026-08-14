@@ -89,11 +89,56 @@ const MaintenanceAnalysis = () => {
         }
         if (state.showSerials !== undefined) setShowSerials(state.showSerials);
         if (state.schedule) setSchedule(state.schedule);
+
+        // Reconcile cached serials/functional locations with the latest park data
+        if (state.parkName) {
+          (async () => {
+            try {
+              const latest = await getSerialsByPark(state.parkName);
+              if (!latest || latest.length === 0) return;
+              const savedSerials: SequencedSerial[] = state.serials || [];
+              const latestBySerial = new Map(latest.map((s: any) => [String(s.serialNumber), s]));
+              const sameSet =
+                savedSerials.length === latest.length &&
+                savedSerials.every((s) => latestBySerial.has(String(s.serialNumber)));
+
+              if (sameSet) {
+                // Only refresh functional locations, keep sequencing
+                const needsUpdate = savedSerials.some(
+                  (s) => latestBySerial.get(String(s.serialNumber))?.functionalLocation !== s.functionalLocation
+                );
+                if (needsUpdate) {
+                  const updated = savedSerials.map((s) => ({
+                    ...s,
+                    functionalLocation:
+                      latestBySerial.get(String(s.serialNumber))?.functionalLocation ?? s.functionalLocation,
+                  }));
+                  setSerials(updated);
+                  setSchedule((prev) =>
+                    prev.map((e: any) => ({
+                      ...e,
+                      functionalLocation:
+                        latestBySerial.get(String(e.serialNumber))?.functionalLocation ?? e.functionalLocation,
+                    }))
+                  );
+                }
+              } else {
+                // Serial list itself changed: reload from source
+                setSerials(latest.map((s: any) => ({ ...s, sequence: 0 })));
+                setShowSerials(false);
+                setSchedule([]);
+              }
+            } catch (e) {
+              console.error("Error syncing park data:", e);
+            }
+          })();
+        }
       } catch (error) {
         console.error("Error loading saved state:", error);
       }
     }
   }, [navigate]);
+
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
