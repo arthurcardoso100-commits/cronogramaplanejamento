@@ -740,7 +740,7 @@ const MaintenanceAnalysis = () => {
 
                 <div className="space-y-2">
                   <Label>Ações</Label>
-                  <div className="flex items-start">
+                  <div className="flex items-start gap-2 flex-wrap">
                     <Button 
                       onClick={handleClearData} 
                       variant="outline" 
@@ -750,8 +750,15 @@ const MaintenanceAnalysis = () => {
                       <Eraser className="w-4 h-4 mr-2" />
                       Limpar Dados
                     </Button>
+                    <CloudSchedules
+                      module="maintenance"
+                      parkName={parkName}
+                      getState={getCloudState}
+                      applyState={applyCloudState}
+                    />
                   </div>
                 </div>
+
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
