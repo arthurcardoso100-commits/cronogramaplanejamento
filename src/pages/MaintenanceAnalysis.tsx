@@ -14,6 +14,8 @@ import { format, addDays, parse } from "date-fns";
 import * as XLSX from 'xlsx';
 import { generatePDF } from "@/lib/pdfGenerator";
 import { Activity } from "@/pages/Schedule";
+import { CloudSchedules } from "@/components/CloudSchedules";
+
 
 interface EditableHoliday {
   date: Date;
