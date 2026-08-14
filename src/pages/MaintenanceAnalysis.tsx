@@ -584,7 +584,37 @@ const MaintenanceAnalysis = () => {
     toast.success("Feriado removido");
   };
 
+  const getCloudState = () => ({
+    parkName,
+    usePeriods,
+    periods,
+    includeSaturdays,
+    includeSundays,
+    includeHolidays,
+    serials,
+    editableHolidays: editableHolidays.map(h => ({ ...h, date: h.date.toISOString() })),
+    showSerials,
+    schedule,
+  });
+
+  const applyCloudState = (state: any) => {
+    if (!state) return;
+    setParkName(state.parkName || "");
+    setUsePeriods(!!state.usePeriods);
+    setPeriods(state.periods || [{ id: 1, serviceDescription: "", teamCount: 1, duration: 1, startDate: "" }]);
+    setIncludeSaturdays(!!state.includeSaturdays);
+    setIncludeSundays(!!state.includeSundays);
+    setIncludeHolidays(!!state.includeHolidays);
+    setSerials(state.serials || []);
+    const loadedHolidays = (state.editableHolidays || []).map((h: any) => ({ ...h, date: new Date(h.date) }));
+    setEditableHolidays(loadedHolidays);
+    setHolidays(loadedHolidays.map((h: EditableHoliday) => h.date));
+    setShowSerials(!!state.showSerials);
+    setSchedule(state.schedule || []);
+  };
+
   const handleClearData = () => {
+
     setParkName("");
     setUsePeriods(false);
     setPeriods([{ id: 1, serviceDescription: "", teamCount: 1, duration: 1, startDate: "" }]);
