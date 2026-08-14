@@ -11,6 +11,8 @@ import { ActivityList } from "@/components/ActivityList";
 import { generatePDF } from "@/lib/pdfGenerator";
 import { toast } from "sonner";
 import { PARK_NAMES, getHolidaysByPark } from "@/data/parksData";
+import { CloudSchedules } from "@/components/CloudSchedules";
+
 
 export interface Activity {
   id: string;
@@ -71,6 +73,32 @@ const Schedule = () => {
     toast.success("PDF gerado com sucesso");
   };
 
+  const getCloudState = () => ({
+    activityName,
+    parkName,
+    activities: activities.map(a => ({
+      ...a,
+      startDate: a.startDate instanceof Date ? a.startDate.toISOString() : a.startDate,
+      endDate: a.endDate instanceof Date ? a.endDate.toISOString() : a.endDate,
+    })),
+  });
+
+  const applyCloudState = (state: any) => {
+    if (!state) return;
+    setActivityName(state.activityName || "");
+    const park = state.parkName || "";
+    setParkName(park);
+    setHolidays(park ? getHolidaysByPark(park) : []);
+    setActivities(
+      (state.activities || []).map((a: any) => ({
+        ...a,
+        startDate: new Date(a.startDate),
+        endDate: new Date(a.endDate),
+      }))
+    );
+    setShowForm(false);
+  };
+
   const handleClearData = () => {
     setActivities([]);
     setActivityName("");
@@ -78,6 +106,7 @@ const Schedule = () => {
     setHolidays([]);
     toast.success("Dados limpos com sucesso");
   };
+
 
   const handleLogout = () => {
     sessionStorage.removeItem("authenticated");
@@ -116,7 +145,14 @@ const Schedule = () => {
                     Preencha as informações básicas e importe as atividades
                   </CardDescription>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  <CloudSchedules
+                    module="vestas"
+                    parkName={parkName}
+                    getState={getCloudState}
+                    applyState={applyCloudState}
+                  />
+
                   <Button onClick={handleClearData} variant="outline" className="gap-2">
                     <Trash2 className="w-4 h-4" />
                     Limpar Dados

@@ -14,7 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      saved_schedules: {
+        Row: {
+          created_at: string
+          id: string
+          module: string
+          name: string
+          park_name: string | null
+          payload: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          module: string
+          name: string
+          park_name?: string | null
+          payload?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          module?: string
+          name?: string
+          park_name?: string | null
+          payload?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

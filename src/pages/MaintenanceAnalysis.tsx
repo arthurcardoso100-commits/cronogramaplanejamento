@@ -14,6 +14,8 @@ import { format, addDays, parse } from "date-fns";
 import * as XLSX from 'xlsx';
 import { generatePDF } from "@/lib/pdfGenerator";
 import { Activity } from "@/pages/Schedule";
+import { CloudSchedules } from "@/components/CloudSchedules";
+
 
 interface EditableHoliday {
   date: Date;
@@ -584,7 +586,37 @@ const MaintenanceAnalysis = () => {
     toast.success("Feriado removido");
   };
 
+  const getCloudState = () => ({
+    parkName,
+    usePeriods,
+    periods,
+    includeSaturdays,
+    includeSundays,
+    includeHolidays,
+    serials,
+    editableHolidays: editableHolidays.map(h => ({ ...h, date: h.date.toISOString() })),
+    showSerials,
+    schedule,
+  });
+
+  const applyCloudState = (state: any) => {
+    if (!state) return;
+    setParkName(state.parkName || "");
+    setUsePeriods(!!state.usePeriods);
+    setPeriods(state.periods || [{ id: 1, serviceDescription: "", teamCount: 1, duration: 1, startDate: "" }]);
+    setIncludeSaturdays(!!state.includeSaturdays);
+    setIncludeSundays(!!state.includeSundays);
+    setIncludeHolidays(!!state.includeHolidays);
+    setSerials(state.serials || []);
+    const loadedHolidays = (state.editableHolidays || []).map((h: any) => ({ ...h, date: new Date(h.date) }));
+    setEditableHolidays(loadedHolidays);
+    setHolidays(loadedHolidays.map((h: EditableHoliday) => h.date));
+    setShowSerials(!!state.showSerials);
+    setSchedule(state.schedule || []);
+  };
+
   const handleClearData = () => {
+
     setParkName("");
     setUsePeriods(false);
     setPeriods([{ id: 1, serviceDescription: "", teamCount: 1, duration: 1, startDate: "" }]);
@@ -740,7 +772,7 @@ const MaintenanceAnalysis = () => {
 
                 <div className="space-y-2">
                   <Label>Ações</Label>
-                  <div className="flex items-start">
+                  <div className="flex items-start gap-2 flex-wrap">
                     <Button 
                       onClick={handleClearData} 
                       variant="outline" 
@@ -750,8 +782,15 @@ const MaintenanceAnalysis = () => {
                       <Eraser className="w-4 h-4 mr-2" />
                       Limpar Dados
                     </Button>
+                    <CloudSchedules
+                      module="maintenance"
+                      parkName={parkName}
+                      getState={getCloudState}
+                      applyState={applyCloudState}
+                    />
                   </div>
                 </div>
+
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
