@@ -11,6 +11,8 @@ import { ActivityList } from "@/components/ActivityList";
 import { generatePDF } from "@/lib/pdfGenerator";
 import { toast } from "sonner";
 import { PARK_NAMES, getHolidaysByPark } from "@/data/parksData";
+import { CloudSchedules } from "@/components/CloudSchedules";
+
 
 export interface Activity {
   id: string;
