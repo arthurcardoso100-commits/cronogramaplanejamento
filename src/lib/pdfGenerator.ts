@@ -7,7 +7,10 @@ import vestasLogo from "@/assets/vestas-logo.png";
 export interface PdfLayoutOptions {
   weeksPerPage?: number;
   rowsPerPage?: number;
+  /** Indices (from buildPdfPages output) that the user removed in the preview */
+  excludedPages?: number[];
 }
+
 
 export interface PdfPage {
   activities: Activity[];
