@@ -5,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Wind } from "lucide-react";
+import { Wind, Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
