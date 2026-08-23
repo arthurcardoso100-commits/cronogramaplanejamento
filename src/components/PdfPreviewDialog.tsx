@@ -51,6 +51,8 @@ export const PdfPreviewDialog = ({
   const [weeksPerPage, setWeeksPerPage] = useState(8);
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [rows, setRows] = useState<EditableRow[]>([]);
+  const [excludedPages, setExcludedPages] = useState<number[]>([]);
+
 
   useEffect(() => {
     if (!open) return;
