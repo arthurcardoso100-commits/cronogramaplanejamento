@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download } from "lucide-react";
+import { Download, Trash2, RotateCcw } from "lucide-react";
 import { Activity } from "@/pages/Schedule";
 import { buildPdfPages, generatePDF } from "@/lib/pdfGenerator";
 import { format, differenceInDays } from "date-fns";
