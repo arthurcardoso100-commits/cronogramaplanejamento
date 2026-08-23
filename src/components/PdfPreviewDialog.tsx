@@ -189,7 +189,7 @@ export const PdfPreviewDialog = ({
 
           <TabsContent value="preview" className="flex-1 overflow-auto bg-muted/40 rounded-md p-4">
             <div className="space-y-6">
-              {pages.map((page, pIdx) => {
+              {pages.map(({ page, index: realIdx }, pIdx) => {
                 const hasTeam = page.activities.some((a) => a.team && a.team.trim() !== "");
                 const cols = {
                   seq: 15,
@@ -206,8 +206,20 @@ export const PdfPreviewDialog = ({
                 const totalDays = page.weeks.length * 7;
 
                 return (
-                  <div key={pIdx} className="mx-auto" style={{ width: PAGE_W * 2.2 }}>
-                    <div className="text-xs text-muted-foreground mb-1">Página {pIdx + 1} de {pages.length}</div>
+                  <div key={realIdx} className="mx-auto" style={{ width: PAGE_W * 2.2 }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-xs text-muted-foreground">Página {pIdx + 1} de {pages.length}</div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive gap-1"
+                        onClick={() => setExcludedPages((prev) => [...prev, realIdx])}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Apagar página
+                      </Button>
+                    </div>
+
                     <div
                       className="bg-white shadow-md origin-top-left relative"
                       style={{
