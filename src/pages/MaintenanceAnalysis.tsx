@@ -61,6 +61,9 @@ const MaintenanceAnalysis = () => {
   const [newHolidayDescription, setNewHolidayDescription] = useState("");
   const [showSerials, setShowSerials] = useState(false);
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewActivities, setPreviewActivities] = useState<Activity[]>([]);
+  const [previewTitle, setPreviewTitle] = useState("");
 
   useEffect(() => {
     if (sessionStorage.getItem("authenticated") !== "true") {
@@ -1171,6 +1174,15 @@ const MaintenanceAnalysis = () => {
           )}
         </div>
       </div>
+
+      <PdfPreviewDialog
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        activities={previewActivities}
+        activityName={previewTitle}
+        windfarmName={parkName}
+        useProvidedDuration
+      />
     </div>
   );
 };
