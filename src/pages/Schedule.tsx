@@ -69,9 +69,9 @@ const Schedule = () => {
       return;
     }
     
-    generatePDF(activities, activityName, parkName);
-    toast.success("PDF gerado com sucesso");
+    setShowPreview(true);
   };
+
 
   const getCloudState = () => ({
     activityName,
