@@ -370,8 +370,10 @@ export const generatePDF = (
       // Gantt bar (clipped to the current week window)
       const ganttBarX = xPos;
       const ganttBarWidth = colWidths.gantt - 4;
-      const ganttY = yPos + 3;
-      const ganttHeight = rowHeight - 6;
+      const barInset = Math.min(1.2, rowHeight * 0.15);
+      const ganttY = yPos + barInset;
+      const ganttHeight = Math.max(1.2, rowHeight - barInset * 2);
+
 
       const daysFromStart = differenceInDays(activity.startDate, windowStart);
       const activityDays = differenceInDays(activity.endDate, activity.startDate) + 1;
