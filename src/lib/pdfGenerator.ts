@@ -7,7 +7,10 @@ import vestasLogo from "@/assets/vestas-logo.png";
 export interface PdfLayoutOptions {
   weeksPerPage?: number;
   rowsPerPage?: number;
+  /** Indices (from buildPdfPages output) that the user removed in the preview */
+  excludedPages?: number[];
 }
+
 
 export interface PdfPage {
   activities: Activity[];
@@ -47,6 +50,14 @@ export const buildPdfPages = (
 
     for (let w = 0; w < windowCount; w++) {
       const windowStart = addDays(globalStart, w * weeksPerPage * 7);
+      const windowEnd = addDays(windowStart, weeksPerPage * 7 - 1);
+
+      // Skip windows where none of this chunk's activities appear
+      const hasContent = pageActivities.some(
+        (a) => a.startDate <= windowEnd && a.endDate >= windowStart
+      );
+      if (!hasContent) continue;
+
       const weekDates: Date[] = [];
       const weeks: number[] = [];
       for (let i = 0; i < weeksPerPage; i++) {
@@ -57,6 +68,7 @@ export const buildPdfPages = (
       pages.push({ activities: pageActivities, windowStart, weeks, weekDates });
     }
   }
+
 
   return pages;
 };
@@ -211,7 +223,9 @@ export const generatePDF = (
   const calendarHeight = 16;
   const availableHeight = pageHeight - (2 * margin) - headerHeight - calendarHeight;
 
-  const pages = buildPdfPages(activities, options);
+  const excluded = new Set(options.excludedPages ?? []);
+  const pages = buildPdfPages(activities, options).filter((_, i) => !excluded.has(i));
+
 
   pages.forEach((page, pageIndex) => {
     if (pageIndex > 0) {
@@ -356,8 +370,10 @@ export const generatePDF = (
       // Gantt bar (clipped to the current week window)
       const ganttBarX = xPos;
       const ganttBarWidth = colWidths.gantt - 4;
-      const ganttY = yPos + 3;
-      const ganttHeight = rowHeight - 6;
+      const barInset = Math.min(1.2, rowHeight * 0.15);
+      const ganttY = yPos + barInset;
+      const ganttHeight = Math.max(1.2, rowHeight - barInset * 2);
+
 
       const daysFromStart = differenceInDays(activity.startDate, windowStart);
       const activityDays = differenceInDays(activity.endDate, activity.startDate) + 1;

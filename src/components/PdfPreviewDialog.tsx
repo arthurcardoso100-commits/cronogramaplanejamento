@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download } from "lucide-react";
+import { Download, Trash2, RotateCcw } from "lucide-react";
 import { Activity } from "@/pages/Schedule";
 import { buildPdfPages, generatePDF } from "@/lib/pdfGenerator";
 import { format, differenceInDays } from "date-fns";
@@ -51,6 +51,8 @@ export const PdfPreviewDialog = ({
   const [weeksPerPage, setWeeksPerPage] = useState(8);
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [rows, setRows] = useState<EditableRow[]>([]);
+  const [excludedPages, setExcludedPages] = useState<number[]>([]);
+
 
   useEffect(() => {
     if (!open) return;
@@ -68,7 +70,12 @@ export const PdfPreviewDialog = ({
         duration: a.duration,
       }))
     );
+    setExcludedPages([]);
   }, [open, activities, activityName, windfarmName]);
+
+  useEffect(() => {
+    setExcludedPages([]);
+  }, [weeksPerPage, rowsPerPage]);
 
   const builtActivities: Activity[] = useMemo(
     () =>
@@ -87,9 +94,14 @@ export const PdfPreviewDialog = ({
     [rows]
   );
 
-  const pages = useMemo(
+  const allPages = useMemo(
     () => buildPdfPages(builtActivities, { weeksPerPage, rowsPerPage }),
     [builtActivities, weeksPerPage, rowsPerPage]
+  );
+
+  const pages = useMemo(
+    () => allPages.map((p, i) => ({ page: p, index: i })).filter(({ index }) => !excludedPages.includes(index)),
+    [allPages, excludedPages]
   );
 
   const update = (index: number, field: keyof EditableRow, value: string) => {
@@ -104,8 +116,10 @@ export const PdfPreviewDialog = ({
     generatePDF(builtActivities, title, park, useProvidedDuration, {
       weeksPerPage,
       rowsPerPage,
+      excludedPages,
     });
   };
+
 
   // ---- preview geometry (mm, matching the PDF) ----
   const PAGE_W = 420;
@@ -168,14 +182,23 @@ export const PdfPreviewDialog = ({
         </div>
 
         <Tabs defaultValue="preview" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="w-fit">
-            <TabsTrigger value="preview">Pré-visualização</TabsTrigger>
-            <TabsTrigger value="data">Editar dados</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between gap-2">
+            <TabsList className="w-fit">
+              <TabsTrigger value="preview">Pré-visualização</TabsTrigger>
+              <TabsTrigger value="data">Editar dados</TabsTrigger>
+            </TabsList>
+            {excludedPages.length > 0 && (
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setExcludedPages([])}>
+                <RotateCcw className="w-3.5 h-3.5" />
+                Restaurar {excludedPages.length} página(s)
+              </Button>
+            )}
+          </div>
+
 
           <TabsContent value="preview" className="flex-1 overflow-auto bg-muted/40 rounded-md p-4">
             <div className="space-y-6">
-              {pages.map((page, pIdx) => {
+              {pages.map(({ page, index: realIdx }, pIdx) => {
                 const hasTeam = page.activities.some((a) => a.team && a.team.trim() !== "");
                 const cols = {
                   seq: 15,
@@ -192,8 +215,20 @@ export const PdfPreviewDialog = ({
                 const totalDays = page.weeks.length * 7;
 
                 return (
-                  <div key={pIdx} className="mx-auto" style={{ width: PAGE_W * 2.2 }}>
-                    <div className="text-xs text-muted-foreground mb-1">Página {pIdx + 1} de {pages.length}</div>
+                  <div key={realIdx} className="mx-auto" style={{ width: PAGE_W * 2.2 }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-xs text-muted-foreground">Página {pIdx + 1} de {pages.length}</div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive gap-1"
+                        onClick={() => setExcludedPages((prev) => [...prev, realIdx])}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Apagar página
+                      </Button>
+                    </div>
+
                     <div
                       className="bg-white shadow-md origin-top-left relative"
                       style={{
@@ -392,14 +427,15 @@ export const PdfPreviewDialog = ({
                                 style={{
                                   position: "absolute",
                                   left: usedWidth + (clipStart / totalDays) * ganttWidth,
-                                  top: 3,
+                                  top: Math.min(1.2, rowHeight * 0.15),
                                   width: ((clipEnd - clipStart) / totalDays) * ganttWidth,
-                                  height: Math.max(0.5, rowHeight - 6),
+                                  height: Math.max(1.2, rowHeight - Math.min(1.2, rowHeight * 0.15) * 2),
                                   background: "rgb(59,130,246)",
                                   borderRadius: 1,
                                 }}
                               />
                             )}
+
                           </div>
                         );
                       })}
