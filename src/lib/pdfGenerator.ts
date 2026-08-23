@@ -50,6 +50,14 @@ export const buildPdfPages = (
 
     for (let w = 0; w < windowCount; w++) {
       const windowStart = addDays(globalStart, w * weeksPerPage * 7);
+      const windowEnd = addDays(windowStart, weeksPerPage * 7 - 1);
+
+      // Skip windows where none of this chunk's activities appear
+      const hasContent = pageActivities.some(
+        (a) => a.startDate <= windowEnd && a.endDate >= windowStart
+      );
+      if (!hasContent) continue;
+
       const weekDates: Date[] = [];
       const weeks: number[] = [];
       for (let i = 0; i < weeksPerPage; i++) {
@@ -60,6 +68,7 @@ export const buildPdfPages = (
       pages.push({ activities: pageActivities, windowStart, weeks, weekDates });
     }
   }
+
 
   return pages;
 };
