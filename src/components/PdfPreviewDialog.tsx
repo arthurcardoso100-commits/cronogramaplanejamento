@@ -182,10 +182,19 @@ export const PdfPreviewDialog = ({
         </div>
 
         <Tabs defaultValue="preview" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="w-fit">
-            <TabsTrigger value="preview">Pré-visualização</TabsTrigger>
-            <TabsTrigger value="data">Editar dados</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between gap-2">
+            <TabsList className="w-fit">
+              <TabsTrigger value="preview">Pré-visualização</TabsTrigger>
+              <TabsTrigger value="data">Editar dados</TabsTrigger>
+            </TabsList>
+            {excludedPages.length > 0 && (
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setExcludedPages([])}>
+                <RotateCcw className="w-3.5 h-3.5" />
+                Restaurar {excludedPages.length} página(s)
+              </Button>
+            )}
+          </div>
+
 
           <TabsContent value="preview" className="flex-1 overflow-auto bg-muted/40 rounded-md p-4">
             <div className="space-y-6">
