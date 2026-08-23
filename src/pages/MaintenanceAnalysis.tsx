@@ -12,7 +12,7 @@ import { PARK_NAMES, getSerialsByPark, getHolidaysByPark, SerialData } from "@/d
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, addDays, parse } from "date-fns";
 import * as XLSX from 'xlsx';
-import { generatePDF } from "@/lib/pdfGenerator";
+import { PdfPreviewDialog } from "@/components/PdfPreviewDialog";
 import { Activity } from "@/pages/Schedule";
 import { CloudSchedules } from "@/components/CloudSchedules";
 
@@ -61,6 +61,9 @@ const MaintenanceAnalysis = () => {
   const [newHolidayDescription, setNewHolidayDescription] = useState("");
   const [showSerials, setShowSerials] = useState(false);
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewActivities, setPreviewActivities] = useState<Activity[]>([]);
+  const [previewTitle, setPreviewTitle] = useState("");
 
   useEffect(() => {
     if (sessionStorage.getItem("authenticated") !== "true") {
@@ -720,8 +723,9 @@ const MaintenanceAnalysis = () => {
       };
     });
 
-    generatePDF(activities, activityName, parkName, true);
-    toast.success("PDF gerado com sucesso");
+    setPreviewActivities(activities);
+    setPreviewTitle(activityName);
+    setShowPreview(true);
   };
 
   const handleExportToExcel = () => {
@@ -1170,6 +1174,15 @@ const MaintenanceAnalysis = () => {
           )}
         </div>
       </div>
+
+      <PdfPreviewDialog
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        activities={previewActivities}
+        activityName={previewTitle}
+        windfarmName={parkName}
+        useProvidedDuration
+      />
     </div>
   );
 };
