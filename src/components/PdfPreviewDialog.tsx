@@ -70,7 +70,12 @@ export const PdfPreviewDialog = ({
         duration: a.duration,
       }))
     );
+    setExcludedPages([]);
   }, [open, activities, activityName, windfarmName]);
+
+  useEffect(() => {
+    setExcludedPages([]);
+  }, [weeksPerPage, rowsPerPage]);
 
   const builtActivities: Activity[] = useMemo(
     () =>
@@ -89,9 +94,14 @@ export const PdfPreviewDialog = ({
     [rows]
   );
 
-  const pages = useMemo(
+  const allPages = useMemo(
     () => buildPdfPages(builtActivities, { weeksPerPage, rowsPerPage }),
     [builtActivities, weeksPerPage, rowsPerPage]
+  );
+
+  const pages = useMemo(
+    () => allPages.map((p, i) => ({ page: p, index: i })).filter(({ index }) => !excludedPages.includes(index)),
+    [allPages, excludedPages]
   );
 
   const update = (index: number, field: keyof EditableRow, value: string) => {
@@ -106,8 +116,10 @@ export const PdfPreviewDialog = ({
     generatePDF(builtActivities, title, park, useProvidedDuration, {
       weeksPerPage,
       rowsPerPage,
+      excludedPages,
     });
   };
+
 
   // ---- preview geometry (mm, matching the PDF) ----
   const PAGE_W = 420;
