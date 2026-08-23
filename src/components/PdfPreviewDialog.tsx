@@ -392,14 +392,15 @@ export const PdfPreviewDialog = ({
                                 style={{
                                   position: "absolute",
                                   left: usedWidth + (clipStart / totalDays) * ganttWidth,
-                                  top: 3,
+                                  top: Math.min(1.2, rowHeight * 0.15),
                                   width: ((clipEnd - clipStart) / totalDays) * ganttWidth,
-                                  height: Math.max(0.5, rowHeight - 6),
+                                  height: Math.max(1.2, rowHeight - Math.min(1.2, rowHeight * 0.15) * 2),
                                   background: "rgb(59,130,246)",
                                   borderRadius: 1,
                                 }}
                               />
                             )}
+
                           </div>
                         );
                       })}
