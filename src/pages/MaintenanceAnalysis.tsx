@@ -12,7 +12,7 @@ import { PARK_NAMES, getSerialsByPark, getHolidaysByPark, SerialData } from "@/d
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, addDays, parse } from "date-fns";
 import * as XLSX from 'xlsx';
-import { generatePDF } from "@/lib/pdfGenerator";
+import { PdfPreviewDialog } from "@/components/PdfPreviewDialog";
 import { Activity } from "@/pages/Schedule";
 import { CloudSchedules } from "@/components/CloudSchedules";
 
@@ -720,8 +720,9 @@ const MaintenanceAnalysis = () => {
       };
     });
 
-    generatePDF(activities, activityName, parkName, true);
-    toast.success("PDF gerado com sucesso");
+    setPreviewActivities(activities);
+    setPreviewTitle(activityName);
+    setShowPreview(true);
   };
 
   const handleExportToExcel = () => {

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Wind, Download, Plus, Trash2, LogOut, ArrowLeft } from "lucide-react";
 import { ActivityForm } from "@/components/ActivityForm";
 import { ActivityList } from "@/components/ActivityList";
-import { generatePDF } from "@/lib/pdfGenerator";
+import { PdfPreviewDialog } from "@/components/PdfPreviewDialog";
 import { toast } from "sonner";
 import { PARK_NAMES, getHolidaysByPark } from "@/data/parksData";
 import { CloudSchedules } from "@/components/CloudSchedules";
@@ -34,6 +34,7 @@ const Schedule = () => {
   const [activityName, setActivityName] = useState("");
   const [parkName, setParkName] = useState("");
   const [holidays, setHolidays] = useState<Date[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     if (sessionStorage.getItem("authenticated") !== "true") {
@@ -235,6 +236,14 @@ const Schedule = () => {
           </Card>
         </div>
       </div>
+
+      <PdfPreviewDialog
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        activities={activities}
+        activityName={activityName}
+        windfarmName={parkName}
+      />
     </div>
   );
 };
