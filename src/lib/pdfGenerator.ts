@@ -223,7 +223,9 @@ export const generatePDF = (
   const calendarHeight = 16;
   const availableHeight = pageHeight - (2 * margin) - headerHeight - calendarHeight;
 
-  const pages = buildPdfPages(activities, options);
+  const excluded = new Set(options.excludedPages ?? []);
+  const pages = buildPdfPages(activities, options).filter((_, i) => !excluded.has(i));
+
 
   pages.forEach((page, pageIndex) => {
     if (pageIndex > 0) {
