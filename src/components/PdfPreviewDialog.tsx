@@ -213,7 +213,14 @@ export const PdfPreviewDialog = ({
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1 flex flex-col justify-end">
+            <Button variant="outline" className="gap-2" onClick={handleAutoLayout}>
+              <Wand2 className="w-4 h-4" />
+              Sugestão de layout automático
+            </Button>
+          </div>
         </div>
+
 
         <Tabs defaultValue="preview" className="flex-1 overflow-hidden flex flex-col">
           <div className="flex items-center justify-between gap-2">
