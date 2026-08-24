@@ -158,7 +158,7 @@ export const suggestAutoLayout = (
 };
 
 
-const drawHeader = (pdf: jsPDF, pageWidth: number, margin: number, activityName: string, windfarmName: string, pageNum: number) => {
+const drawHeader = (pdf: jsPDF, pageWidth: number, margin: number, titleText: string, pageNum: number) => {
   // Add Vestas logo with correct aspect ratio (3.33:1)
   const logoWidth = 40;
   const logoHeight = 18;
@@ -168,12 +168,10 @@ const drawHeader = (pdf: jsPDF, pageWidth: number, margin: number, activityName:
   pdf.setTextColor(33, 87, 138);
   pdf.setFontSize(18);
   pdf.setFont("helvetica", "bold");
-  pdf.text(
-    `Cronograma ${activityName} - ${windfarmName}`,
-    pageWidth / 2,
-    margin + 10,
-    { align: "center" }
-  );
+  if (titleText.trim() !== "") {
+    pdf.text(titleText, pageWidth / 2, margin + 10, { align: "center" });
+  }
+
 
   // Page number in top right
   pdf.setTextColor(100, 100, 100);
