@@ -271,7 +271,10 @@ const drawCalendarHeader = (
       pdf.line(weekX, yPos + 6, weekX, yPos + 16);
     }
 
-    pdf.text("Week", weekX + weekWidth / 2, yPos + 9, { align: "center" });
+    if (weekLabel.trim() !== "") {
+      pdf.text(weekLabel, weekX + weekWidth / 2, yPos + 9, { align: "center" });
+    }
+
     pdf.text(weekNum.toString().padStart(2, '0'), weekX + weekWidth / 2, yPos + 13, { align: "center" });
   }
 
