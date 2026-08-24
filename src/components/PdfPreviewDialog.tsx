@@ -297,7 +297,7 @@ export const PdfPreviewDialog = ({
                           fontSize: 6.5,
                         }}
                       >
-                        {`Cronograma ${title} - ${park}`}
+                        {titleText}
                       </div>
                       <div
                         style={{
