@@ -326,13 +326,13 @@ export const PdfPreviewDialog = ({
                         }}
                       >
                         {[
-                          ["ID", cols.seq],
-                          ["Description of functional location", cols.functional],
-                          ["Serial Number", cols.serial],
-                          ...(hasTeam ? ([["Team", cols.team]] as [string, number][]) : []),
-                          ["Start", cols.start],
-                          ["End", cols.end],
-                          ["Duration (days)", cols.duration],
+                          [labels.id, cols.seq],
+                          [labels.functional, cols.functional],
+                          [labels.serial, cols.serial],
+                          ...(hasTeam ? ([[labels.team, cols.team]] as [string, number][]) : []),
+                          [labels.start, cols.start],
+                          [labels.end, cols.end],
+                          [labels.duration, cols.duration],
                         ].map(([label, w], i, arr) => {
                           const left = (arr.slice(0, i) as [string, number][]).reduce((s, c) => s + c[1], 0);
                           return (
@@ -369,7 +369,7 @@ export const PdfPreviewDialog = ({
                                 fontSize: 2.4,
                               }}
                             >
-                              <div>Week</div>
+                              <div>{labels.week}</div>
                               <div>{String(page.weeks[i]).padStart(2, "0")}</div>
                             </div>
                           );
