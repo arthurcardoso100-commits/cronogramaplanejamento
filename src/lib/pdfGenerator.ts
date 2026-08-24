@@ -377,24 +377,23 @@ export const generatePDF = (
     pdf.setFont("helvetica", "bold");
 
     let xPos = margin + 2;
-    pdf.text("ID", xPos, yPos + 8);
+    pdf.text(labels.id, xPos, yPos + 8);
     xPos += colWidths.seq;
-    pdf.text("Description of functional location", xPos, yPos + 8);
+    pdf.text(labels.functional, xPos, yPos + 8, { maxWidth: colWidths.functional - 4 });
     xPos += colWidths.functional;
-    pdf.text("Serial Number", xPos, yPos + 8);
+    pdf.text(labels.serial, xPos, yPos + 8, { maxWidth: colWidths.serial - 4 });
     xPos += colWidths.serial;
 
     if (hasTeamInfo) {
-      pdf.text("Team", xPos, yPos + 8);
+      pdf.text(labels.team, xPos, yPos + 8, { maxWidth: colWidths.team - 4 });
       xPos += colWidths.team;
     }
 
-    pdf.text("Start", xPos, yPos + 8);
+    pdf.text(labels.start, xPos, yPos + 8, { maxWidth: colWidths.start - 4 });
     xPos += colWidths.start;
-    pdf.text("End", xPos, yPos + 8);
+    pdf.text(labels.end, xPos, yPos + 8, { maxWidth: colWidths.end - 4 });
     xPos += colWidths.end;
-    pdf.text("Duration", xPos, yPos + 6);
-    pdf.text("(days)", xPos, yPos + 11);
+    pdf.text(labels.duration, xPos, yPos + 8, { maxWidth: colWidths.duration - 4 });
     xPos += colWidths.duration;
 
     // Draw calendar header for Gantt column
@@ -404,7 +403,8 @@ export const generatePDF = (
     // Calculate table height
     const tableHeight = rowHeight * activitiesCount;
 
-    drawCalendarHeader(pdf, yPos, ganttX, ganttWidth, page.weekDates, tableHeight);
+    drawCalendarHeader(pdf, yPos, ganttX, ganttWidth, page.weekDates, tableHeight, labels.week);
+
 
     yPos += 16;
 
