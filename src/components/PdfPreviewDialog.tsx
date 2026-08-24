@@ -129,8 +129,18 @@ export const PdfPreviewDialog = ({
       weeksPerPage,
       rowsPerPage,
       excludedPages,
+      titleOverride: titleText,
+      labels,
     });
   };
+
+  const handleAutoLayout = () => {
+    const suggestion = suggestAutoLayout(builtActivities);
+    setWeeksPerPage(suggestion.weeksPerPage);
+    setRowsPerPage(suggestion.rowsPerPage);
+    setExcludedPages([]);
+  };
+
 
 
   // ---- preview geometry (mm, matching the PDF) ----
