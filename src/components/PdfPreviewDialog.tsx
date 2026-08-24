@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Trash2, RotateCcw } from "lucide-react";
+import { Download, Trash2, RotateCcw, Wand2 } from "lucide-react";
 import { Activity } from "@/pages/Schedule";
-import { buildPdfPages, generatePDF } from "@/lib/pdfGenerator";
+import { buildPdfPages, generatePDF, suggestAutoLayout, DEFAULT_PDF_LABELS, PdfLabels } from "@/lib/pdfGenerator";
 import { format, differenceInDays } from "date-fns";
 import { enUS } from "date-fns/locale";
 import vestasLogo from "@/assets/vestas-logo.png";
@@ -48,6 +48,9 @@ export const PdfPreviewDialog = ({
 }: Props) => {
   const [title, setTitle] = useState(activityName);
   const [park, setPark] = useState(windfarmName);
+  const [titleText, setTitleText] = useState("");
+  const [titleTouched, setTitleTouched] = useState(false);
+  const [labels, setLabels] = useState<PdfLabels>(DEFAULT_PDF_LABELS);
   const [weeksPerPage, setWeeksPerPage] = useState(8);
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [rows, setRows] = useState<EditableRow[]>([]);
@@ -58,6 +61,9 @@ export const PdfPreviewDialog = ({
     if (!open) return;
     setTitle(activityName);
     setPark(windfarmName);
+    setTitleText(`Cronograma ${activityName} - ${windfarmName}`);
+    setTitleTouched(false);
+    setLabels(DEFAULT_PDF_LABELS);
     setRows(
       activities.map((a) => ({
         id: a.id,
@@ -73,9 +79,15 @@ export const PdfPreviewDialog = ({
     setExcludedPages([]);
   }, [open, activities, activityName, windfarmName]);
 
+  // Keep the composed title in sync until the user edits it manually
+  useEffect(() => {
+    if (!titleTouched) setTitleText(`Cronograma ${title} - ${park}`);
+  }, [title, park, titleTouched]);
+
   useEffect(() => {
     setExcludedPages([]);
   }, [weeksPerPage, rowsPerPage]);
+
 
   const builtActivities: Activity[] = useMemo(
     () =>
@@ -117,8 +129,18 @@ export const PdfPreviewDialog = ({
       weeksPerPage,
       rowsPerPage,
       excludedPages,
+      titleOverride: titleText,
+      labels,
     });
   };
+
+  const handleAutoLayout = () => {
+    const suggestion = suggestAutoLayout(builtActivities);
+    setWeeksPerPage(suggestion.weeksPerPage);
+    setRowsPerPage(suggestion.rowsPerPage);
+    setExcludedPages([]);
+  };
+
 
 
   // ---- preview geometry (mm, matching the PDF) ----
@@ -149,8 +171,20 @@ export const PdfPreviewDialog = ({
             <Label>Nome do Parque</Label>
             <Input value={park} onChange={(e) => setPark(e.target.value)} />
           </div>
+          <div className="space-y-1 md:col-span-2">
+            <Label>Título do cronograma (editável)</Label>
+            <Input
+              value={titleText}
+              placeholder="(sem título)"
+              onChange={(e) => {
+                setTitleTouched(true);
+                setTitleText(e.target.value);
+              }}
+            />
+          </div>
           <div className="space-y-1">
             <Label>Semanas por página</Label>
+
             <Select value={String(weeksPerPage)} onValueChange={(v) => setWeeksPerPage(Number(v))}>
               <SelectTrigger>
                 <SelectValue />
@@ -179,7 +213,14 @@ export const PdfPreviewDialog = ({
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1 flex flex-col justify-end">
+            <Button variant="outline" className="gap-2" onClick={handleAutoLayout}>
+              <Wand2 className="w-4 h-4" />
+              Sugestão de layout automático
+            </Button>
+          </div>
         </div>
+
 
         <Tabs defaultValue="preview" className="flex-1 overflow-hidden flex flex-col">
           <div className="flex items-center justify-between gap-2">
@@ -256,7 +297,7 @@ export const PdfPreviewDialog = ({
                           fontSize: 6.5,
                         }}
                       >
-                        {`Cronograma ${title} - ${park}`}
+                        {titleText}
                       </div>
                       <div
                         style={{
@@ -285,13 +326,13 @@ export const PdfPreviewDialog = ({
                         }}
                       >
                         {[
-                          ["ID", cols.seq],
-                          ["Description of functional location", cols.functional],
-                          ["Serial Number", cols.serial],
-                          ...(hasTeam ? ([["Team", cols.team]] as [string, number][]) : []),
-                          ["Start", cols.start],
-                          ["End", cols.end],
-                          ["Duration (days)", cols.duration],
+                          [labels.id, cols.seq],
+                          [labels.functional, cols.functional],
+                          [labels.serial, cols.serial],
+                          ...(hasTeam ? ([[labels.team, cols.team]] as [string, number][]) : []),
+                          [labels.start, cols.start],
+                          [labels.end, cols.end],
+                          [labels.duration, cols.duration],
                         ].map(([label, w], i, arr) => {
                           const left = (arr.slice(0, i) as [string, number][]).reduce((s, c) => s + c[1], 0);
                           return (
@@ -328,7 +369,7 @@ export const PdfPreviewDialog = ({
                                 fontSize: 2.4,
                               }}
                             >
-                              <div>Week</div>
+                              <div>{labels.week}</div>
                               <div>{String(page.weeks[i]).padStart(2, "0")}</div>
                             </div>
                           );
@@ -447,7 +488,33 @@ export const PdfPreviewDialog = ({
           </TabsContent>
 
           <TabsContent value="data" className="flex-1 overflow-auto">
+            <div className="mb-4 border rounded-md p-3">
+              <div className="text-sm font-semibold mb-2">Nomes dos cabeçalhos (usados no PDF)</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {(
+                  [
+                    ["id", "ID"],
+                    ["functional", "Functional location"],
+                    ["serial", "Serial number"],
+                    ["team", "Equipe"],
+                    ["start", "Início"],
+                    ["end", "Fim"],
+                    ["duration", "Duração"],
+                    ["week", "Week"],
+                  ] as [keyof PdfLabels, string][]
+                ).map(([key, hint]) => (
+                  <div key={key} className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{hint}</Label>
+                    <Input
+                      value={labels[key]}
+                      onChange={(e) => setLabels((prev) => ({ ...prev, [key]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="min-w-[900px]">
+
               <div className="grid grid-cols-[70px_1fr_130px_90px_140px_140px_90px] gap-2 text-xs font-semibold px-1 py-2 sticky top-0 bg-background">
                 <div>ID</div>
                 <div>Functional Location</div>
