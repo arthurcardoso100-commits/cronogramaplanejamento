@@ -190,8 +190,10 @@ const drawCalendarHeader = (
   ganttX: number,
   ganttWidth: number,
   weekDates: Date[],
-  tableHeight: number
+  tableHeight: number,
+  weekLabel: string = "Week"
 ) => {
+
   const totalWeeks = weekDates.length;
   const weekWidth = ganttWidth / totalWeeks;
 
