@@ -171,8 +171,20 @@ export const PdfPreviewDialog = ({
             <Label>Nome do Parque</Label>
             <Input value={park} onChange={(e) => setPark(e.target.value)} />
           </div>
+          <div className="space-y-1 md:col-span-2">
+            <Label>Título do cronograma (editável)</Label>
+            <Input
+              value={titleText}
+              placeholder="(sem título)"
+              onChange={(e) => {
+                setTitleTouched(true);
+                setTitleText(e.target.value);
+              }}
+            />
+          </div>
           <div className="space-y-1">
             <Label>Semanas por página</Label>
+
             <Select value={String(weeksPerPage)} onValueChange={(v) => setWeeksPerPage(Number(v))}>
               <SelectTrigger>
                 <SelectValue />
