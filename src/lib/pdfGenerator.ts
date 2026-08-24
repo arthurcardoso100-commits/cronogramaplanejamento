@@ -4,11 +4,36 @@ import { format, differenceInDays, min, max, getWeek, startOfWeek, addDays } fro
 import { enUS } from "date-fns/locale";
 import vestasLogo from "@/assets/vestas-logo.png";
 
+export interface PdfLabels {
+  id: string;
+  functional: string;
+  serial: string;
+  team: string;
+  start: string;
+  end: string;
+  duration: string;
+  week: string;
+}
+
+export const DEFAULT_PDF_LABELS: PdfLabels = {
+  id: "ID",
+  functional: "Description of functional location",
+  serial: "Serial Number",
+  team: "Team",
+  start: "Start",
+  end: "End",
+  duration: "Duration (days)",
+  week: "Week",
+};
+
 export interface PdfLayoutOptions {
   weeksPerPage?: number;
   rowsPerPage?: number;
   /** Indices (from buildPdfPages output) that the user removed in the preview */
   excludedPages?: number[];
+  /** Full title text; when provided it replaces the default composed title */
+  titleOverride?: string;
+  labels?: Partial<PdfLabels>;
 }
 
 
@@ -21,6 +46,11 @@ export interface PdfPage {
 
 /**
  * Computes the pagination used both by the PDF export and the on-screen preview.
+ *
+ * Single source of truth: a continuous week sequence is derived from the whole
+ * schedule and then split into windows of `weeksPerPage`. Weeks therefore never
+ * restart or repeat between window groups. Inside each window the rows are
+ * chunked by `rowsPerPage`.
  */
 export const buildPdfPages = (
   activities: Activity[],
@@ -38,40 +68,95 @@ export const buildPdfPages = (
     1,
     Math.ceil((differenceInDays(globalEnd, globalStart) + 1) / 7)
   );
-  const windowCount = Math.ceil(totalWeeks / weeksPerPage);
+
+  // Continuous week sequence for the entire document
+  const weekSequence: Date[] = Array.from({ length: totalWeeks }, (_, i) =>
+    addDays(globalStart, i * 7)
+  );
 
   const pages: PdfPage[] = [];
 
-  for (let chunk = 0; chunk * rowsPerPage < activities.length; chunk++) {
-    const pageActivities = activities.slice(
-      chunk * rowsPerPage,
-      chunk * rowsPerPage + rowsPerPage
+  for (let w = 0; w < weekSequence.length; w += weeksPerPage) {
+    const weekDates = weekSequence.slice(w, w + weeksPerPage);
+    const windowStart = weekDates[0];
+    const windowEnd = addDays(windowStart, weekDates.length * 7 - 1);
+    const weeks = weekDates.map((d) =>
+      getWeek(d, { weekStartsOn: 1, firstWeekContainsDate: 4 })
     );
 
-    for (let w = 0; w < windowCount; w++) {
-      const windowStart = addDays(globalStart, w * weeksPerPage * 7);
-      const windowEnd = addDays(windowStart, weeksPerPage * 7 - 1);
+    const windowActivities = activities.filter(
+      (a) => a.startDate <= windowEnd && a.endDate >= windowStart
+    );
+    if (windowActivities.length === 0) continue;
 
-      // Skip windows where none of this chunk's activities appear
-      const hasContent = pageActivities.some(
-        (a) => a.startDate <= windowEnd && a.endDate >= windowStart
-      );
-      if (!hasContent) continue;
-
-      const weekDates: Date[] = [];
-      const weeks: number[] = [];
-      for (let i = 0; i < weeksPerPage; i++) {
-        const d = addDays(windowStart, i * 7);
-        weekDates.push(d);
-        weeks.push(getWeek(d, { weekStartsOn: 1, firstWeekContainsDate: 4 }));
-      }
-      pages.push({ activities: pageActivities, windowStart, weeks, weekDates });
+    for (let chunk = 0; chunk * rowsPerPage < windowActivities.length; chunk++) {
+      pages.push({
+        activities: windowActivities.slice(
+          chunk * rowsPerPage,
+          chunk * rowsPerPage + rowsPerPage
+        ),
+        windowStart,
+        weeks,
+        weekDates,
+      });
     }
   }
 
-
   return pages;
 };
+
+/**
+ * Suggests the best balance between weeks/page and rows/page for the schedule.
+ */
+export const suggestAutoLayout = (
+  activities: Activity[]
+): { weeksPerPage: number; rowsPerPage: number } => {
+  if (activities.length === 0) return { weeksPerPage: 8, rowsPerPage: 50 };
+
+  const allDates = activities.flatMap((a) => [a.startDate, a.endDate]);
+  const globalStart = startOfWeek(min(allDates), { weekStartsOn: 1 });
+  const globalEnd = max(allDates);
+  const totalWeeks = Math.max(
+    1,
+    Math.ceil((differenceInDays(globalEnd, globalStart) + 1) / 7)
+  );
+  const rowCount = activities.length;
+
+  let best = { weeksPerPage: 8, rowsPerPage: 50, score: -Infinity };
+
+  for (let wpp = 1; wpp <= 8; wpp++) {
+    for (let rpp = 5; rpp <= 50; rpp++) {
+      const pages = buildPdfPages(activities, {
+        weeksPerPage: wpp,
+        rowsPerPage: rpp,
+      }).length;
+      if (pages === 0) continue;
+
+      // Geometry (A3 landscape, mm) — mirrors generatePDF
+      const availableHeight = 297 - 30 - 25 - 16;
+      const rowHeight = availableHeight / rpp;
+      const ganttWidth = 420 - 30 - 213 - 4;
+      const weekWidth = ganttWidth / wpp;
+
+      // Legibility: rows should be at least ~4mm tall, weeks at least ~10mm wide
+      const rowScore = Math.min(rowHeight / 5, 1.2);
+      const weekScore = Math.min(weekWidth / 14, 1.2);
+      // Page usage: fill the rows we actually have
+      const fill = Math.min(rowCount, rpp) / rpp;
+      const weekFill = Math.min(totalWeeks, wpp) / wpp;
+      // Fewer pages is better, but not at the cost of legibility
+      const pagePenalty = pages / Math.max(1, Math.ceil(rowCount / 50) * Math.ceil(totalWeeks / 8));
+
+      const score =
+        rowScore * 2.2 + weekScore * 2.2 + fill * 1.4 + weekFill * 1.4 - pagePenalty * 0.6;
+
+      if (score > best.score) best = { weeksPerPage: wpp, rowsPerPage: rpp, score };
+    }
+  }
+
+  return { weeksPerPage: best.weeksPerPage, rowsPerPage: best.rowsPerPage };
+};
+
 
 const drawHeader = (pdf: jsPDF, pageWidth: number, margin: number, activityName: string, windfarmName: string, pageNum: number) => {
   // Add Vestas logo with correct aspect ratio (3.33:1)
