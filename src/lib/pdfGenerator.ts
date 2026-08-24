@@ -311,6 +311,12 @@ export const generatePDF = (
   const calendarHeight = 16;
   const availableHeight = pageHeight - (2 * margin) - headerHeight - calendarHeight;
 
+  const labels: PdfLabels = { ...DEFAULT_PDF_LABELS, ...(options.labels ?? {}) };
+  const titleText =
+    options.titleOverride !== undefined
+      ? options.titleOverride
+      : `Cronograma ${activityName} - ${windfarmName}`;
+
   const excluded = new Set(options.excludedPages ?? []);
   const pages = buildPdfPages(activities, options).filter((_, i) => !excluded.has(i));
 
