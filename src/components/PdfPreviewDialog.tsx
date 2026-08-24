@@ -48,6 +48,9 @@ export const PdfPreviewDialog = ({
 }: Props) => {
   const [title, setTitle] = useState(activityName);
   const [park, setPark] = useState(windfarmName);
+  const [titleText, setTitleText] = useState("");
+  const [titleTouched, setTitleTouched] = useState(false);
+  const [labels, setLabels] = useState<PdfLabels>(DEFAULT_PDF_LABELS);
   const [weeksPerPage, setWeeksPerPage] = useState(8);
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [rows, setRows] = useState<EditableRow[]>([]);
@@ -58,6 +61,9 @@ export const PdfPreviewDialog = ({
     if (!open) return;
     setTitle(activityName);
     setPark(windfarmName);
+    setTitleText(`Cronograma ${activityName} - ${windfarmName}`);
+    setTitleTouched(false);
+    setLabels(DEFAULT_PDF_LABELS);
     setRows(
       activities.map((a) => ({
         id: a.id,
@@ -73,9 +79,15 @@ export const PdfPreviewDialog = ({
     setExcludedPages([]);
   }, [open, activities, activityName, windfarmName]);
 
+  // Keep the composed title in sync until the user edits it manually
+  useEffect(() => {
+    if (!titleTouched) setTitleText(`Cronograma ${title} - ${park}`);
+  }, [title, park, titleTouched]);
+
   useEffect(() => {
     setExcludedPages([]);
   }, [weeksPerPage, rowsPerPage]);
+
 
   const builtActivities: Activity[] = useMemo(
     () =>
