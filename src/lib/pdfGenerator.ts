@@ -328,7 +328,8 @@ export const generatePDF = (
     const rowHeight = availableHeight / rowsPerPage;
 
     // Draw header
-    drawHeader(pdf, pageWidth, margin, activityName, windfarmName, pageNum);
+    drawHeader(pdf, pageWidth, margin, titleText, pageNum);
+
 
     // Table starting position
     let yPos = margin + headerHeight;
