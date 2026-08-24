@@ -488,7 +488,33 @@ export const PdfPreviewDialog = ({
           </TabsContent>
 
           <TabsContent value="data" className="flex-1 overflow-auto">
+            <div className="mb-4 border rounded-md p-3">
+              <div className="text-sm font-semibold mb-2">Nomes dos cabeçalhos (usados no PDF)</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {(
+                  [
+                    ["id", "ID"],
+                    ["functional", "Functional location"],
+                    ["serial", "Serial number"],
+                    ["team", "Equipe"],
+                    ["start", "Início"],
+                    ["end", "Fim"],
+                    ["duration", "Duração"],
+                    ["week", "Week"],
+                  ] as [keyof PdfLabels, string][]
+                ).map(([key, hint]) => (
+                  <div key={key} className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{hint}</Label>
+                    <Input
+                      value={labels[key]}
+                      onChange={(e) => setLabels((prev) => ({ ...prev, [key]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="min-w-[900px]">
+
               <div className="grid grid-cols-[70px_1fr_130px_90px_140px_140px_90px] gap-2 text-xs font-semibold px-1 py-2 sticky top-0 bg-background">
                 <div>ID</div>
                 <div>Functional Location</div>
