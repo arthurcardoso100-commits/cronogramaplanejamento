@@ -239,7 +239,13 @@ const Schedule = () => {
         activities={activities}
         activityName={activityName}
         windfarmName={parkName}
+        onApplyChanges={(updated, newActivityName, newParkName) => {
+          setActivities(updated);
+          setActivityName(newActivityName);
+          if (newParkName !== parkName) setParkName(newParkName);
+        }}
       />
+
     </div>
   );
 };
