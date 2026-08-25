@@ -21,6 +21,7 @@ export interface SavedSchedule {
   module: string;
   park_name: string | null;
   payload: any;
+  user_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -41,6 +42,11 @@ export const CloudSchedules = ({ module, parkName, getState, applyState }: Cloud
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [currentId, setCurrentId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -67,6 +73,10 @@ export const CloudSchedules = ({ module, parkName, getState, applyState }: Cloud
       toast.error("Informe um nome para o cronograma");
       return;
     }
+    if (!userId) {
+      toast.error("Faça login para salvar cronogramas");
+      return;
+    }
     setSaving(true);
     const payload = getState();
 
@@ -84,7 +94,7 @@ export const CloudSchedules = ({ module, parkName, getState, applyState }: Cloud
     } else {
       const { data, error } = await supabase
         .from("saved_schedules")
-        .insert({ name: name.trim(), module, park_name: parkName || null, payload })
+        .insert({ name: name.trim(), module, park_name: parkName || null, payload, user_id: userId })
         .select()
         .single();
       setSaving(false);
@@ -100,18 +110,23 @@ export const CloudSchedules = ({ module, parkName, getState, applyState }: Cloud
 
   const handleLoad = (item: SavedSchedule) => {
     applyState(item.payload);
-    setCurrentId(item.id);
+    setCurrentId(item.user_id === userId ? item.id : null);
     setName(item.name);
     setOpen(false);
     toast.success(`Cronograma "${item.name}" carregado`);
   };
 
   const handleDuplicate = async (item: SavedSchedule) => {
+    if (!userId) {
+      toast.error("Faça login para duplicar cronogramas");
+      return;
+    }
     const { error } = await supabase.from("saved_schedules").insert({
       name: `${item.name} (cópia)`,
       module: item.module,
       park_name: item.park_name,
       payload: item.payload,
+      user_id: userId,
     });
     if (error) {
       toast.error("Erro ao duplicar cronograma");
@@ -202,9 +217,11 @@ export const CloudSchedules = ({ module, parkName, getState, applyState }: Cloud
                     <Button size="icon" variant="outline" onClick={() => handleDuplicate(item)} title="Duplicar">
                       <Copy className="w-4 h-4" />
                     </Button>
-                    <Button size="icon" variant="outline" onClick={() => handleDelete(item)} title="Excluir">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {item.user_id === userId && (
+                      <Button size="icon" variant="outline" onClick={() => handleDelete(item)} title="Excluir">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

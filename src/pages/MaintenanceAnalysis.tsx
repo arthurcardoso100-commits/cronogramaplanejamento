@@ -15,6 +15,8 @@ import * as XLSX from 'xlsx';
 import { PdfPreviewDialog } from "@/components/PdfPreviewDialog";
 import { Activity } from "@/pages/Schedule";
 import { CloudSchedules } from "@/components/CloudSchedules";
+import { supabase } from "@/integrations/supabase/client";
+import { userScopedKey } from "@/lib/auth";
 
 
 interface EditableHoliday {
@@ -65,13 +67,19 @@ const MaintenanceAnalysis = () => {
   const [previewActivities, setPreviewActivities] = useState<Activity[]>([]);
   const [previewTitle, setPreviewTitle] = useState("");
 
+  const [storageKey, setStorageKey] = useState<string | null>(null);
+
   useEffect(() => {
-    if (sessionStorage.getItem("authenticated") !== "true") {
-      navigate("/");
-    }
-    
-    // Load persisted state
-    const savedState = localStorage.getItem("maintenanceAnalysisState");
+    supabase.auth.getUser().then(({ data }) => {
+      setStorageKey(userScopedKey("maintenanceAnalysisState", data.user?.id));
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!storageKey) return;
+
+    // Load persisted state (scoped to the signed-in user)
+    const savedState = localStorage.getItem(storageKey);
     if (savedState) {
       try {
         const state = JSON.parse(savedState);
@@ -140,11 +148,12 @@ const MaintenanceAnalysis = () => {
         console.error("Error loading saved state:", error);
       }
     }
-  }, [navigate]);
+  }, [storageKey]);
 
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
+    if (!storageKey) return;
     const state = {
       parkName,
       usePeriods,
@@ -157,8 +166,8 @@ const MaintenanceAnalysis = () => {
       showSerials,
       schedule
     };
-    localStorage.setItem("maintenanceAnalysisState", JSON.stringify(state));
-  }, [parkName, usePeriods, periods, includeSaturdays, includeSundays, includeHolidays, serials, editableHolidays, showSerials, schedule]);
+    localStorage.setItem(storageKey, JSON.stringify(state));
+  }, [storageKey, parkName, usePeriods, periods, includeSaturdays, includeSundays, includeHolidays, serials, editableHolidays, showSerials, schedule]);
 
   const handleParkSelect = async (value: string) => {
     setParkName(value);
@@ -678,7 +687,7 @@ const MaintenanceAnalysis = () => {
     setNewHolidayDescription("");
     setShowSerials(false);
     setSchedule([]);
-    localStorage.removeItem("maintenanceAnalysisState");
+    if (storageKey) localStorage.removeItem(storageKey);
     toast.success("Dados limpos com sucesso");
   };
 
