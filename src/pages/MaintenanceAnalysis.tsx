@@ -1191,7 +1191,25 @@ const MaintenanceAnalysis = () => {
         activityName={previewTitle}
         windfarmName={parkName}
         useProvidedDuration
+        onApplyChanges={(updated, newTitle) => {
+          setPreviewActivities(updated);
+          setPreviewTitle(newTitle);
+          const fmt = (d: Date) =>
+            `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+          setSchedule((prev) =>
+            updated.map((a, i) => ({
+              seq: Number(a.activityDescription) || prev[i]?.seq || i + 1,
+              functionalLocation: a.functionalDescription,
+              serialNumber: a.serialNumber,
+              team: a.team || "",
+              startDate: fmt(a.startDate),
+              endDate: fmt(a.endDate),
+              duration: a.duration,
+            }))
+          );
+        }}
       />
+
     </div>
   );
 };
