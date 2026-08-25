@@ -146,6 +146,7 @@ export const PdfPreviewDialog = ({
   // ---- preview geometry (mm, matching the PDF) ----
   const PAGE_W = 420;
   const PAGE_H = 297;
+  const SCALE = zoom;
   const margin = 15;
   const contentWidth = PAGE_W - 2 * margin;
   const headerHeight = 25;
@@ -162,18 +163,19 @@ export const PdfPreviewDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-x-3 gap-y-2 items-end">
           <div className="space-y-1">
-            <Label>Nome da Atividade</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Label className="text-xs">Atividade</Label>
+            <Input className="h-8 text-sm" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label>Nome do Parque</Label>
-            <Input value={park} onChange={(e) => setPark(e.target.value)} />
+            <Label className="text-xs">Parque</Label>
+            <Input className="h-8 text-sm" value={park} onChange={(e) => setPark(e.target.value)} />
           </div>
-          <div className="space-y-1 md:col-span-2">
-            <Label>Título do cronograma (editável)</Label>
+          <div className="space-y-1 col-span-2">
+            <Label className="text-xs">Título do cronograma</Label>
             <Input
+              className="h-8 text-sm"
               value={titleText}
               placeholder="(sem título)"
               onChange={(e) => {
@@ -183,25 +185,24 @@ export const PdfPreviewDialog = ({
             />
           </div>
           <div className="space-y-1">
-            <Label>Semanas por página</Label>
-
+            <Label className="text-xs whitespace-nowrap">Semanas / página</Label>
             <Select value={String(weeksPerPage)} onValueChange={(v) => setWeeksPerPage(Number(v))}>
-              <SelectTrigger>
+              <SelectTrigger className="h-8 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background">
                 {Array.from({ length: 8 }, (_, i) => i + 1).map((n) => (
                   <SelectItem key={n} value={String(n)}>
-                    {n} {n === 1 ? "semana" : "semanas"}
+                    {n}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Functional locations por página</Label>
+            <Label className="text-xs whitespace-nowrap">Locais / página</Label>
             <Select value={String(rowsPerPage)} onValueChange={(v) => setRowsPerPage(Number(v))}>
-              <SelectTrigger>
+              <SelectTrigger className="h-8 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background max-h-64">
@@ -213,28 +214,43 @@ export const PdfPreviewDialog = ({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1 flex flex-col justify-end">
-            <Button variant="outline" className="gap-2" onClick={handleAutoLayout}>
-              <Wand2 className="w-4 h-4" />
-              Sugestão de layout automático
-            </Button>
-          </div>
         </div>
 
-
         <Tabs defaultValue="preview" className="flex-1 overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between gap-2">
-            <TabsList className="w-fit">
-              <TabsTrigger value="preview">Pré-visualização</TabsTrigger>
-              <TabsTrigger value="data">Editar dados</TabsTrigger>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <TabsList className="w-fit h-8">
+              <TabsTrigger value="preview" className="text-xs">Pré-visualização</TabsTrigger>
+              <TabsTrigger value="data" className="text-xs">Editar dados</TabsTrigger>
             </TabsList>
-            {excludedPages.length > 0 && (
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => setExcludedPages([])}>
-                <RotateCcw className="w-3.5 h-3.5" />
-                Restaurar {excludedPages.length} página(s)
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={handleAutoLayout}>
+                <Wand2 className="w-3.5 h-3.5" />
+                Layout automático
               </Button>
-            )}
+              <div className="flex items-center gap-1">
+                <Label className="text-xs text-muted-foreground">Zoom</Label>
+                <Select value={String(zoom)} onValueChange={(v) => setZoom(Number(v))}>
+                  <SelectTrigger className="h-8 w-[80px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    {[1.5, 2, 2.5, 3, 3.5, 4].map((z) => (
+                      <SelectItem key={z} value={String(z)}>
+                        {Math.round(z * 33)}%
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {excludedPages.length > 0 && (
+                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setExcludedPages([])}>
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Restaurar {excludedPages.length}
+                </Button>
+              )}
+            </div>
           </div>
+
 
 
           <TabsContent value="preview" className="flex-1 overflow-auto bg-muted/40 rounded-md p-4">
