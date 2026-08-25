@@ -1,21 +1,15 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Wind, FileText, BarChart3, LogOut } from "lucide-react";
+import { signOut } from "@/lib/auth";
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (sessionStorage.getItem("authenticated") !== "true") {
-      navigate("/");
-    }
-  }, [navigate]);
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("authenticated");
-    navigate("/");
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/", { replace: true });
   };
 
   return (
