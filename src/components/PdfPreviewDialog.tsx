@@ -128,7 +128,13 @@ export const PdfPreviewDialog = ({
     );
   };
 
+  const applyChanges = (silent = false) => {
+    onApplyChanges?.(builtActivities, title, park);
+    if (!silent) toast.success("Alterações aplicadas ao cronograma do app");
+  };
+
   const handleExport = () => {
+    applyChanges(true);
     generatePDF(builtActivities, title, park, useProvidedDuration, {
       weeksPerPage,
       rowsPerPage,
@@ -137,6 +143,7 @@ export const PdfPreviewDialog = ({
       labels,
     });
   };
+
 
   const handleAutoLayout = () => {
     const suggestion = suggestAutoLayout(builtActivities);
