@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { PdfPreviewDialog } from "@/components/PdfPreviewDialog";
 import { toast } from "sonner";
 import { PARK_NAMES, getHolidaysByPark } from "@/data/parksData";
 import { CloudSchedules } from "@/components/CloudSchedules";
+import { signOut } from "@/lib/auth";
 
 
 export interface Activity {
@@ -104,9 +105,9 @@ const Schedule = () => {
   };
 
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("authenticated");
-    navigate("/");
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/", { replace: true });
   };
 
   return (
