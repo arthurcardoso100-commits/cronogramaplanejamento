@@ -30,6 +30,7 @@ interface Props {
   activityName: string;
   windfarmName: string;
   useProvidedDuration?: boolean;
+  onApplyChanges?: (activities: Activity[], activityName: string, windfarmName: string) => void;
 }
 
 const toInput = (d: Date) => format(d, "yyyy-MM-dd");
@@ -45,6 +46,7 @@ export const PdfPreviewDialog = ({
   activityName,
   windfarmName,
   useProvidedDuration = false,
+  onApplyChanges,
 }: Props) => {
   const [title, setTitle] = useState(activityName);
   const [park, setPark] = useState(windfarmName);
@@ -55,6 +57,8 @@ export const PdfPreviewDialog = ({
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [rows, setRows] = useState<EditableRow[]>([]);
   const [excludedPages, setExcludedPages] = useState<number[]>([]);
+  const [zoom, setZoom] = useState(2.5);
+
 
 
   useEffect(() => {
