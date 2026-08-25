@@ -238,7 +238,7 @@ export const PdfPreviewDialog = ({
 
 
           <TabsContent value="preview" className="flex-1 overflow-auto bg-muted/40 rounded-md p-4">
-            <div className="space-y-6">
+            <div className="space-y-8">
               {pages.map(({ page, index: realIdx }, pIdx) => {
                 const hasTeam = page.activities.some((a) => a.team && a.team.trim() !== "");
                 const cols = {
@@ -254,15 +254,17 @@ export const PdfPreviewDialog = ({
                   cols.seq + cols.functional + cols.serial + cols.team + cols.start + cols.end + cols.duration;
                 const ganttWidth = contentWidth - usedWidth - 4;
                 const totalDays = page.weeks.length * 7;
+                // render at native pixel size (no CSS transform) for crisp text
+                const s = (v: number) => v * SCALE;
 
                 return (
-                  <div key={realIdx} className="mx-auto" style={{ width: PAGE_W * 2.2 }}>
+                  <div key={realIdx} className="mx-auto" style={{ width: s(PAGE_W) }}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="text-xs text-muted-foreground">Página {pIdx + 1} de {pages.length}</div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-destructive gap-1"
+                        className="h-7 text-xs text-destructive gap-1"
                         onClick={() => setExcludedPages((prev) => [...prev, realIdx])}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -271,30 +273,29 @@ export const PdfPreviewDialog = ({
                     </div>
 
                     <div
-                      className="bg-white shadow-md origin-top-left relative"
+                      className="bg-white shadow-md relative overflow-hidden"
                       style={{
-                        width: PAGE_W,
-                        height: PAGE_H,
-                        transform: "scale(2.2)",
-                        marginBottom: PAGE_H * 1.2,
+                        width: s(PAGE_W),
+                        height: s(PAGE_H),
+                        WebkitFontSmoothing: "antialiased",
                       }}
                     >
                       {/* header */}
                       <img
                         src={vestasLogo}
                         alt="Vestas"
-                        style={{ position: "absolute", left: margin, top: margin, width: 40, height: 18, objectFit: "contain" }}
+                        style={{ position: "absolute", left: s(margin), top: s(margin), width: s(40), height: s(18), objectFit: "contain" }}
                       />
                       <div
                         style={{
                           position: "absolute",
-                          top: margin + 4,
+                          top: s(margin + 4),
                           left: 0,
-                          width: PAGE_W,
+                          width: s(PAGE_W),
                           textAlign: "center",
                           color: "rgb(33,87,138)",
                           fontWeight: 700,
-                          fontSize: 6.5,
+                          fontSize: s(6.5),
                         }}
                       >
                         {titleText}
@@ -302,10 +303,10 @@ export const PdfPreviewDialog = ({
                       <div
                         style={{
                           position: "absolute",
-                          top: margin + 6,
-                          right: margin,
+                          top: s(margin + 6),
+                          right: s(margin),
                           color: "rgb(100,100,100)",
-                          fontSize: 3.6,
+                          fontSize: s(3.6),
                         }}
                       >
                         {`Page ${pIdx + 1}`}
@@ -315,13 +316,13 @@ export const PdfPreviewDialog = ({
                       <div
                         style={{
                           position: "absolute",
-                          left: margin,
-                          top: margin + headerHeight,
-                          width: contentWidth,
-                          height: 16,
+                          left: s(margin),
+                          top: s(margin + headerHeight),
+                          width: s(contentWidth),
+                          height: s(16),
                           background: "rgb(33,87,138)",
                           color: "white",
-                          fontSize: 2.9,
+                          fontSize: s(2.9),
                           fontWeight: 700,
                         }}
                       >
@@ -334,15 +335,16 @@ export const PdfPreviewDialog = ({
                           [labels.end, cols.end],
                           [labels.duration, cols.duration],
                         ].map(([label, w], i, arr) => {
-                          const left = (arr.slice(0, i) as [string, number][]).reduce((s, c) => s + c[1], 0);
+                          const left = (arr.slice(0, i) as [string, number][]).reduce((sum, c) => sum + c[1], 0);
                           return (
                             <div
                               key={i}
                               style={{
                                 position: "absolute",
-                                left: left + 2,
-                                top: 6,
-                                width: (w as number) - 3,
+                                left: s(left + 2),
+                                top: s(6),
+                                width: s((w as number) - 3),
+                                whiteSpace: "nowrap",
                                 overflow: "hidden",
                               }}
                             >
@@ -359,14 +361,15 @@ export const PdfPreviewDialog = ({
                               key={i}
                               style={{
                                 position: "absolute",
-                                left: usedWidth + i * weekWidth,
-                                top: 6,
-                                width: weekWidth,
-                                height: 10,
-                                borderLeft: i > 0 ? "0.1mm solid white" : "none",
+                                left: s(usedWidth + i * weekWidth),
+                                top: s(6),
+                                width: s(weekWidth),
+                                height: s(10),
+                                borderLeft: i > 0 ? "1px solid rgba(255,255,255,0.6)" : "none",
                                 textAlign: "center",
                                 fontWeight: 400,
-                                fontSize: 2.4,
+                                fontSize: s(2.4),
+                                lineHeight: 1.15,
                               }}
                             >
                               <div>{labels.week}</div>
@@ -384,29 +387,29 @@ export const PdfPreviewDialog = ({
                             if (last && last.label === label) last.end = i + 1;
                             else segs.push({ label, start: i, end: i + 1 });
                           });
-                          return segs.map((s, i) => (
+                          return segs.map((seg, i) => (
                             <div
                               key={i}
                               style={{
                                 position: "absolute",
-                                left: usedWidth + s.start * weekWidth,
-                                top: 1.2,
-                                width: (s.end - s.start) * weekWidth,
+                                left: s(usedWidth + seg.start * weekWidth),
+                                top: s(1.2),
+                                width: s((seg.end - seg.start) * weekWidth),
                                 textAlign: "center",
-                                fontSize: 2.8,
+                                fontSize: s(2.8),
                               }}
                             >
-                              {s.label}
+                              {seg.label}
                             </div>
                           ));
                         })()}
                         <div
                           style={{
                             position: "absolute",
-                            left: usedWidth,
-                            top: 6,
-                            width: ganttWidth,
-                            borderTop: "0.3mm solid white",
+                            left: s(usedWidth),
+                            top: s(6),
+                            width: s(ganttWidth),
+                            borderTop: "1px solid white",
                           }}
                         />
                       </div>
@@ -430,33 +433,35 @@ export const PdfPreviewDialog = ({
                           [`${format(a.endDate, "EEE", { locale: enUS })} ${format(a.endDate, "dd/MM/yyyy")}`, cols.end],
                           [`${durationToDisplay}d`, cols.duration],
                         ];
+                        const barInset = Math.min(1.2, rowHeight * 0.15);
                         return (
                           <div
                             key={rIdx}
                             style={{
                               position: "absolute",
-                              left: margin,
-                              top,
-                              width: contentWidth,
-                              height: rowHeight,
+                              left: s(margin),
+                              top: s(top),
+                              width: s(contentWidth),
+                              height: s(rowHeight),
                               background: rIdx % 2 === 0 ? "rgb(248,250,252)" : "transparent",
-                              border: "0.2mm solid rgb(226,232,240)",
+                              border: "1px solid rgb(226,232,240)",
                               color: "rgb(60,60,60)",
-                              fontSize: 2.5,
+                              fontSize: s(2.5),
                             }}
                           >
                             {cells.map(([text, w], i) => {
-                              const left = cells.slice(0, i).reduce((s, c) => s + c[1], 0);
+                              const left = cells.slice(0, i).reduce((sum, c) => sum + c[1], 0);
                               return (
                                 <div
                                   key={i}
                                   style={{
                                     position: "absolute",
-                                    left: left + 2,
-                                    top: rowHeight / 2 - 1.4,
-                                    width: w - 3,
+                                    left: s(left + 2),
+                                    top: s(rowHeight / 2 - 1.4),
+                                    width: s(w - 3),
                                     whiteSpace: "nowrap",
                                     overflow: "hidden",
+                                    textOverflow: "ellipsis",
                                   }}
                                 >
                                   {text}
@@ -467,12 +472,12 @@ export const PdfPreviewDialog = ({
                               <div
                                 style={{
                                   position: "absolute",
-                                  left: usedWidth + (clipStart / totalDays) * ganttWidth,
-                                  top: Math.min(1.2, rowHeight * 0.15),
-                                  width: ((clipEnd - clipStart) / totalDays) * ganttWidth,
-                                  height: Math.max(1.2, rowHeight - Math.min(1.2, rowHeight * 0.15) * 2),
+                                  left: s(usedWidth + (clipStart / totalDays) * ganttWidth),
+                                  top: s(barInset),
+                                  width: s(((clipEnd - clipStart) / totalDays) * ganttWidth),
+                                  height: s(Math.max(1.2, rowHeight - barInset * 2)),
                                   background: "rgb(59,130,246)",
-                                  borderRadius: 1,
+                                  borderRadius: s(1),
                                 }}
                               />
                             )}
@@ -486,6 +491,7 @@ export const PdfPreviewDialog = ({
               })}
             </div>
           </TabsContent>
+
 
           <TabsContent value="data" className="flex-1 overflow-auto">
             <div className="mb-4 border rounded-md p-3">
