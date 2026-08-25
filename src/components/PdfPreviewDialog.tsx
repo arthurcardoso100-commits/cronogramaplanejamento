@@ -574,14 +574,21 @@ export const PdfPreviewDialog = ({
         </Tabs>
 
         <div className="flex justify-end gap-2 pt-2 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleExport} className="gap-2">
+          {onApplyChanges && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => applyChanges()}>
+              <Save className="w-4 h-4" />
+              Salvar alterações no app
+            </Button>
+          )}
+          <Button size="sm" onClick={handleExport} className="gap-2">
             <Download className="w-4 h-4" />
             Exportar PDF
           </Button>
         </div>
+
       </DialogContent>
     </Dialog>
   );
