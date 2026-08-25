@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Wind, Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+/** Conta compartilhada usada pelo acesso por senha única. */
+const SHARED_EMAIL = "acesso@vestasplanejamento.app";
+
 const Login = () => {
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -26,95 +27,44 @@ const Login = () => {
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
 
-  const validate = () => {
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      toast.error("Informe um e-mail válido");
-      return false;
-    }
-    if (password.length < 8) {
-      toast.error("A senha deve ter pelo menos 8 caracteres");
-      return false;
-    }
-    return true;
-  };
-
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-    setLoading(false);
-    if (error) {
-      toast.error("E-mail ou senha inválidos");
+    if (!password) {
+      toast.error("Informe a senha");
       return;
     }
+    setLoading(true);
+
+    let { error } = await supabase.auth.signInWithPassword({
+      email: SHARED_EMAIL,
+      password,
+    });
+
+    // Primeiro acesso: cria a conta compartilhada com a senha informada.
+    if (error) {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: SHARED_EMAIL,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/` },
+      });
+      if (!signUpError) {
+        ({ error } = await supabase.auth.signInWithPassword({
+          email: SHARED_EMAIL,
+          password,
+        }));
+      }
+    }
+
+    setLoading(false);
+
+    if (error) {
+      toast.error("Senha incorreta");
+      return;
+    }
+
     toast.success("Acesso autorizado");
     navigate("/dashboard", { replace: true });
   };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/` },
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(
-        error.message.toLowerCase().includes("already")
-          ? "Este e-mail já está cadastrado"
-          : "Não foi possível criar a conta"
-      );
-      return;
-    }
-    toast.success("Conta criada com sucesso");
-    navigate("/dashboard", { replace: true });
-  };
-
-  const passwordField = (
-    <div className="space-y-2">
-      <Label htmlFor="password">Senha</Label>
-      <div className="relative">
-        <Input
-          id="password"
-          type={showPassword ? "text" : "password"}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Digite a senha"
-          autoComplete="current-password"
-          className="transition-all pr-10"
-        />
-        <button
-          type="button"
-          onClick={() => setShowPassword((v) => !v)}
-          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-        >
-          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-        </button>
-      </div>
-    </div>
-  );
-
-  const emailField = (
-    <div className="space-y-2">
-      <Label htmlFor="email">E-mail</Label>
-      <Input
-        id="email"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="voce@empresa.com"
-        autoComplete="email"
-      />
-    </div>
-  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-wind-blue to-accent p-4">
@@ -127,34 +77,34 @@ const Login = () => {
           <CardDescription>Gerador de Cronogramas</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="signin">Entrar</TabsTrigger>
-              <TabsTrigger value="signup">Criar conta</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                {emailField}
-                {passwordField}
-                <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                  {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Entrar
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                {emailField}
-                {passwordField}
-                <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                  {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Criar conta
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha de acesso</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Digite a senha"
+                  autoComplete="current-password"
+                  className="transition-all pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Entrar
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
