@@ -36,11 +36,6 @@ const Schedule = () => {
   const [holidays, setHolidays] = useState<Date[]>([]);
   const [showPreview, setShowPreview] = useState(false);
 
-  useEffect(() => {
-    if (sessionStorage.getItem("authenticated") !== "true") {
-      navigate("/");
-    }
-  }, [navigate]);
 
   const handleAddActivities = (newActivities: Activity[]) => {
     setActivities(newActivities);
