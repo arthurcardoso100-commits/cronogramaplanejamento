@@ -10,7 +10,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Cloud, CloudUpload, Copy, FolderOpen, Loader2, Trash2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Cloud, CloudUpload, Copy, FolderOpen, Info, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -147,14 +148,37 @@ export const CloudSchedules = ({ module, parkName, getState, applyState }: Cloud
     fetchItems();
   };
 
+  const handleQuickSave = () => {
+    if (!name.trim()) {
+      const suggested = [parkName, format(new Date(), "dd/MM/yyyy HH:mm")]
+        .filter(Boolean)
+        .join(" - ");
+      setName(suggested);
+    }
+    setOpen(true);
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <Cloud className="w-4 h-4" />
-          Cronogramas na Nuvem
-        </Button>
-      </DialogTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Cloud className="w-4 h-4" />
+                Cronogramas na Nuvem
+                <Info className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Acesse aqui seu cronograma Salvo</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <Button variant="default" className="gap-2" onClick={handleQuickSave}>
+        <CloudUpload className="w-4 h-4" />
+        Salvar na Nuvem
+      </Button>
       <DialogContent className="max-w-2xl bg-background">
         <DialogHeader>
           <DialogTitle>Cronogramas na Nuvem</DialogTitle>
