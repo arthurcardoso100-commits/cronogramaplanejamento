@@ -276,6 +276,10 @@ const MaintenanceAnalysis = () => {
           toast.error(`Preencha todos os campos do período ${period.id}`);
           return;
         }
+        if (period.duration < 0.5 || !Number.isInteger(period.duration * 2)) {
+          toast.error(`A duração do período ${period.id} deve usar intervalos de 0,5 dia`);
+          return;
+        }
         if (!validateDate(period.startDate)) {
           toast.error(`Data inválida no período ${period.id}. Use o formato dd/mm/yyyy`);
           return;
@@ -285,6 +289,10 @@ const MaintenanceAnalysis = () => {
       const period = periods[0];
       if (!period.serviceDescription || !period.startDate || !period.teamCount || !period.duration) {
         toast.error("Preencha todos os campos");
+        return;
+      }
+      if (period.duration < 0.5 || !Number.isInteger(period.duration * 2)) {
+        toast.error("A duração deve usar intervalos de 0,5 dia");
         return;
       }
       if (!validateDate(period.startDate)) {
