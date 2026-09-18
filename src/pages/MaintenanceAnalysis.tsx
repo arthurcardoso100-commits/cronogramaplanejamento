@@ -383,6 +383,29 @@ const MaintenanceAnalysis = () => {
     return currentDate;
   };
 
+  const getWorkingDateForHalfDaySlot = (start: Date, slotOffset: number): Date => {
+    let currentDate = findFirstWorkingDay(start);
+    let remainingSlots = slotOffset;
+
+    while (remainingSlots >= 2) {
+      currentDate = getNextWorkingDay(currentDate);
+      remainingSlots -= 2;
+    }
+
+    return currentDate;
+  };
+
+  const calculateServiceWindow = (periodStart: Date, duration: number, roundIndex: number) => {
+    const slotsPerService = Math.round(duration * 2);
+    const startSlot = roundIndex * slotsPerService;
+    const endSlot = startSlot + slotsPerService - 1;
+
+    return {
+      startDate: getWorkingDateForHalfDaySlot(periodStart, startSlot),
+      endDate: getWorkingDateForHalfDaySlot(periodStart, endSlot),
+    };
+  };
+
   const handleGenerateSchedule = () => {
     const sequencedSerials = serials
       .filter(s => s.sequence > 0)
@@ -405,19 +428,20 @@ const MaintenanceAnalysis = () => {
       }
 
       const [day, month, year] = period.startDate.split('/').map(Number);
-      let currentDate = new Date(year, month - 1, day);
+      const periodStartDate = new Date(year, month - 1, day);
       const teamsArray = Array.from({ length: period.teamCount }, (_, i) => `T${i + 1}`);
+      let roundIndex = 0;
 
       while (currentSerialIndex < sequencedSerials.length) {
+        const serviceWindow = calculateServiceWindow(periodStartDate, period.duration, roundIndex);
         for (let teamIdx = 0; teamIdx < teamsArray.length; teamIdx++) {
           if (currentSerialIndex >= sequencedSerials.length) break;
 
           const serial = sequencedSerials[currentSerialIndex];
           const teamName = teamsArray[teamIdx];
           
-          const rawStartDate = new Date(currentDate);
-          const entryStartDate = findFirstWorkingDay(rawStartDate);
-          const entryEndDate = calculateWorkingDays(entryStartDate, period.duration);
+          const entryStartDate = serviceWindow.startDate;
+          const entryEndDate = serviceWindow.endDate;
 
           newSchedule.push({
             seq: serial.sequence,
@@ -432,10 +456,7 @@ const MaintenanceAnalysis = () => {
           currentSerialIndex++;
         }
 
-        if (currentSerialIndex < sequencedSerials.length) {
-          currentDate = addDays(calculateWorkingDays(currentDate, period.duration), 1);
-          currentDate = getNextWorkingDay(addDays(currentDate, -1));
-        }
+        roundIndex++;
       }
     } else {
       // Multiple periods logic
@@ -444,8 +465,9 @@ const MaintenanceAnalysis = () => {
         if (!period.startDate || !validateDate(period.startDate)) continue;
 
         const [day, month, year] = period.startDate.split('/').map(Number);
-        let currentDate = new Date(year, month - 1, day);
+        const periodStartDate = new Date(year, month - 1, day);
         const teamsArray = Array.from({ length: period.teamCount }, (_, i) => `T${i + 1}`);
+        let roundIndex = 0;
 
         // Get next period start date to know when to stop
         let nextPeriodStartDate: Date | null = null;
@@ -459,8 +481,9 @@ const MaintenanceAnalysis = () => {
 
         // Process serials for this period until we reach the next period's start date
         while (currentSerialIndex < sequencedSerials.length) {
+          const serviceWindow = calculateServiceWindow(periodStartDate, period.duration, roundIndex);
           // Check if we've reached the next period's start date
-          if (nextPeriodStartDate && currentDate >= nextPeriodStartDate) {
+          if (nextPeriodStartDate && serviceWindow.startDate >= nextPeriodStartDate) {
             break;
           }
 
@@ -471,9 +494,8 @@ const MaintenanceAnalysis = () => {
             const serial = sequencedSerials[currentSerialIndex];
             const teamName = teamsArray[teamIdx];
             
-            const rawStartDate = new Date(currentDate);
-            const entryStartDate = findFirstWorkingDay(rawStartDate);
-            const entryEndDate = calculateWorkingDays(entryStartDate, period.duration);
+            const entryStartDate = serviceWindow.startDate;
+            const entryEndDate = serviceWindow.endDate;
 
             newSchedule.push({
               seq: serial.sequence,
@@ -488,12 +510,11 @@ const MaintenanceAnalysis = () => {
             currentSerialIndex++;
           }
 
-          // Move to next working day after this round
-          currentDate = addDays(calculateWorkingDays(currentDate, period.duration), 1);
-          currentDate = getNextWorkingDay(addDays(currentDate, -1));
+          roundIndex++;
 
           // Check again after moving to next date
-          if (nextPeriodStartDate && currentDate >= nextPeriodStartDate) {
+          const nextWindow = calculateServiceWindow(periodStartDate, period.duration, roundIndex);
+          if (nextPeriodStartDate && nextWindow.startDate >= nextPeriodStartDate) {
             break;
           }
         }
@@ -962,9 +983,10 @@ const MaintenanceAnalysis = () => {
                       <Input
                         id={`duration-${period.id}`}
                         type="number"
-                        min="1"
+                         min="0.5"
+                         step="0.5"
                         value={period.duration}
-                        onChange={(e) => updatePeriod(period.id, 'duration', parseInt(e.target.value) || 1)}
+                         onChange={(e) => updatePeriod(period.id, 'duration', parseFloat(e.target.value) || 0.5)}
                       />
                     </div>
                   </div>
